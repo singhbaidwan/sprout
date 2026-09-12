@@ -114,9 +114,10 @@ Keep the farming identity and add a separate factory scenario. Begin with invent
 
 ### Publication and validation
 
-- Publication status will be recorded after local validation and the first push.
+- Published the complete 25-file project to `origin/main` with initial commit `3007af7` (`first commit`). The push created the remote `main` branch and configured upstream tracking.
+- Re-ran all 27 Python tests successfully before publication. Both JavaScript module syntax checks and the staged whitespace check passed.
 - No gameplay implementation changes were made in this request.
 
 ### Follow-up instruction
 
-The owner requested that the complete current project be pushed first and that future completed features/milestones also be committed and pushed. This standing workflow is recorded in the root `AGENTS.md`. The initial commit will include the playable game, tests, README, and design documentation, rather than only a placeholder README.
+The owner requested that the complete current project be pushed first and that future completed features/milestones also be committed and pushed. This standing workflow is recorded in the root `AGENTS.md`. The initial commit includes the playable game, tests, README, and design documentation, rather than only a placeholder README.

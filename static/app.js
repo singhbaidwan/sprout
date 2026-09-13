@@ -1,13 +1,14 @@
 import { FarmRenderer } from './farm.js';
 
 const $ = id => document.getElementById(id);
-const STORAGE_KEY = 'sprout.save.v1';
+const STORAGE_KEY = 'sprout.save.v2';
 const editor = $('code-editor');
 let state, crops, missions, examples, initialState;
 let mode = 'loading', queue = [], queueIndex = 0, resultError = null;
 let timer = null, toastTimer = null, saveTimer = null, requestToken = 0, controller = null;
 let currentLine = null, errorLine = null, selected = null, logs = 0;
 let storageAvailable = true;
+let saveData = { format: 'sprout-save', version: 2, active: 'classic', games: {} }, pendingImport = null;
 
 const renderer = new FarmRenderer($('farm-canvas'), (x, y) => { selected = { x, y }; updateInspector(); });
 const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -46,8 +47,9 @@ function log(message, kind = 'info', line = null) {
 
 function save() {
   if (!state) return;
+  saveData.games[saveData.active] = { state, code: editor.value, speed: $('speed-select').value };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, state, code: editor.value, speed: $('speed-select').value }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
     $('save-status').textContent = 'Saved on this device';
   } catch {
     $('save-status').textContent = 'Saving unavailable';
@@ -110,6 +112,8 @@ function setMode(next, label) {
   $('step-button').disabled = mode === 'running' || mode === 'loading' || !state;
   $('stop-button').disabled = !busy || !state;
   $('reset-open').disabled = $('reset-footer').disabled = $('reset-confirm').disabled = !state;
+  $('export-save').disabled = !state;
+  $('import-save').disabled = busy || !state;
   $('runtime-status').textContent = label || ({ idle: 'Ready when you are', paused: 'Paused · step or resume', running: 'Program running', loading: 'Preparing your program', error: 'Check your program' }[mode]);
   $('runtime-dot').className = `status-dot ${mode === 'running' ? 'running' : mode === 'error' ? 'error' : ''}`;
   $('field-status').textContent = mode === 'running' ? 'Drone working' : mode === 'paused' ? 'Drone paused' : 'Drone ready';
@@ -344,6 +348,41 @@ document.addEventListener('keydown', event => {
 });
 window.addEventListener('pagehide', save);
 
+$('export-save').addEventListener('click', () => {
+  save();
+  const url = URL.createObjectURL(new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' }));
+  const link = document.createElement('a'); link.href = url;
+  link.download = `sprout-${new Date().toISOString().slice(0, 10)}.json`; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('Save exported. Keep it somewhere safe.');
+});
+$('import-save').addEventListener('click', () => $('save-file').click());
+$('save-file').addEventListener('change', async event => {
+  const file = event.target.files[0]; event.target.value = ''; pendingImport = null;
+  if (!file) return;
+  setMode('loading', 'Checking save…');
+  try {
+    if (file.size > 90000) throw new Error('Save files must be under 90 KB.');
+    const result = await api('save/validate', { save: JSON.parse(await file.text()) });
+    pendingImport = result.save;
+    const game = pendingImport.games[pendingImport.active];
+    $('import-summary').textContent = `${Object.keys(pendingImport.games).length} chapter(s), ${game.state.coins} coins, tick ${game.state.tick}. This replaces the saved chapters on this device.`;
+    $('import-dialog').showModal();
+  } catch (error) { toast(`Save not imported: ${error.message}`, true); }
+  finally { setMode('idle'); }
+});
+$('import-confirm').addEventListener('click', () => {
+  if (!pendingImport) return;
+  save();
+  try { localStorage.setItem('sprout.save.backup', JSON.stringify(saveData)); }
+  catch { toast('Could not back up your current save. Export it before importing.', true); return; }
+  stop(true); saveData = pendingImport; pendingImport = null;
+  const game = saveData.games[saveData.active];
+  selected = renderer.selected = null;
+  setCode(game.code); $('speed-select').value = game.speed; updateState(game.state); save();
+  $('import-dialog').close(); toast('Save restored.');
+});
+
 $('api-open').addEventListener('click', () => openGuide('api'));
 $('guide-top').addEventListener('click', () => openGuide());
 $('footer-guide').addEventListener('click', () => openGuide('api'));
@@ -372,13 +411,12 @@ async function boot() {
     crops = data.crops; missions = data.missions; examples = data.examples; initialState = structuredClone(data.state);
     let restored = data.state, code = examples.starter, restoreMessage = null;
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('sprout.save.v1') || 'null');
       if (saved) {
-        if (saved.version !== 1) throw new Error('Save version is not supported.');
-        const valid = await api('validate', { state: saved.state });
-        restored = valid.state;
-        if (typeof saved.code === 'string' && saved.code.length <= 16000) code = saved.code;
-        if (['1', '2', '4', '8'].includes(saved.speed)) $('speed-select').value = saved.speed;
+        const valid = await api('save/validate', { save: saved });
+        saveData = valid.save;
+        const game = saveData.games[saveData.active];
+        restored = game.state; code = game.code; $('speed-select').value = game.speed;
         restoreMessage = 'Welcome back. Your farm and program have been restored.';
       }
     } catch (error) {

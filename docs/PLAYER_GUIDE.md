@@ -108,3 +108,7 @@ The four missions reward harvesting 3 crops (+20), planting 12 (+25), harvesting
 - **Save not appearing:** saves are specific to this browser, host, and port. `localhost:8000` is different from `127.0.0.1:8000`.
 
 Progress and code save to browser storage. Refreshing during a run keeps displayed actions and discards its remaining queue. Stopping does the same. Clearing browser data or resetting the farm removes current progress. There is no cloud backup. Invalid saves are rejected with a visible notice; use a single tab to avoid last-write-wins conflicts.
+
+## Portable saves
+
+Use **Export save** in the footer to download a JSON backup. Use **Import save**, select that file, review its summary, then choose **Restore save**. Invalid files leave your progress unchanged. Restoration keeps the previous save in the device-local `sprout.save.backup` storage key; export first for an accessible copy. Old single-farm saves migrate automatically. Downloads require browser support; use a regular browser if an embedded browser does not handle downloads.

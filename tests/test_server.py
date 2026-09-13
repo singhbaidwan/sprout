@@ -57,6 +57,14 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn('carrot', json.loads(body)['state']['unlocked'])
 
+    def test_portable_save_endpoint(self):
+        legacy = {'version': 1, 'state': new_state(), 'code': 'harvest()', 'speed': '2'}
+        status, _, body = self.request('POST', '/api/save/validate', {'save': legacy})
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['save']['games']['classic']['state'], new_state())
+        status, _, _ = self.request('POST', '/api/save/validate', {'save': {'version': 99}})
+        self.assertEqual(status, 400)
+
     def test_rejects_cross_origin_and_unknown_hosts(self):
         for headers in [{'Origin': 'https://example.org'}, {'Host': 'evil.example:8000'}]:
             status, _, _ = self.request('POST', '/api/run', {'state': new_state(), 'code': 'harvest()'}, headers)

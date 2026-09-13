@@ -85,7 +85,7 @@ The server accepts only local Host headers for its actual port and rejects misma
 
 ## Persistence
 
-The browser stores one versioned save under `sprout.save.v1`, containing state, editor text, and playback speed. It saves after each displayed action, after upgrades, after edits (debounced), and on page exit. A reload validates state with Python before using it. Only played actions are restored; queued actions are never resumed after a reload.
+The browser stores a version 2 `sprout-save` envelope under `sprout.save.v2`, with an active chapter and a map of chapter state, editor text, and playback speed. `farm/saves.py` migrates the original `sprout.save.v1` envelope into the classic chapter; the world schema stays at version 1. `POST /api/save/validate` validates portable envelopes, rebuilding known fields. Imports validate before confirmation and back up the current envelope under `sprout.save.backup` before replacement; export produces a JSON download. The old v1 key is retained during migration. It saves after each displayed action, after upgrades, after edits (debounced), and on page exit. A reload validates state with Python before using it. Only played actions are restored; queued actions are never resumed after a reload.
 
 Saves belong to the browser origin, so `localhost`, `127.0.0.1`, and different ports each have separate saves. Private browsing or clearing browser data can remove progress. Multiple tabs use last-write-wins behavior. There is no cloud sync, anti-cheat guarantee, save migration beyond version 1, or account recovery.
 

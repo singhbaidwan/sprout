@@ -59,7 +59,7 @@ Moving past an edge wraps around. Each successful drone action advances the farm
 - Edit highlighted code with indentation support, line numbers, and line-specific errors.
 - Load four example programs and consult the in-game Python API guide.
 - Inspect plots visually or through a text table.
-- Save farm progress, code, and speed automatically in your browser.
+- Save farm progress, code, and speed automatically in your browser; export and import JSON backups.
 
 **Keyboard:** Ctrl/Cmd + Enter runs or pauses; Tab indents; Shift + Tab unindents. The layout adapts to desktop and phone screens.
 
@@ -75,7 +75,7 @@ The server simulates a bounded run and returns action frames; the browser plays 
 
 Progress lives in browser storage on this device. Refreshing restores played actions and editor text, but does not resume queued actions. Reset requires an in-game confirmation.
 
-Use the same URL consistently: `localhost`, `127.0.0.1`, and different ports have separate saves. Browser data removal can erase progress. There are no accounts or cloud backups yet.
+Use the same URL consistently: `localhost`, `127.0.0.1`, and different ports have separate saves. Use **Export save** for a portable JSON copy and **Import save** to restore it. Imports are validated before confirmation and retain a device-local backup. Original version 1 saves migrate automatically. Browser data removal can erase progress. There are no accounts or cloud backups yet.
 
 The server binds to loopback and is intended for local play. Publishing this repository does **not** deploy the game. GitHub Pages alone cannot run its Python API; public hosting requires a production server and isolated script execution. See [architecture and deployment boundaries](docs/ARCHITECTURE.md).
 
@@ -87,7 +87,7 @@ Run from the project root:
 python3 -m unittest discover -s tests -v
 ```
 
-The 27 current tests cover farm rules, save validation, campaign completion, upgrades, language behavior, execution limits, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated on Python 3.14; the documented Python 3.10+ range still needs a CI compatibility matrix.
+The 31 current tests cover farm rules, save validation, campaign completion, upgrades, language behavior, execution limits, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
 
 Optional JavaScript syntax checks, if Node.js is available (POSIX shell):
 

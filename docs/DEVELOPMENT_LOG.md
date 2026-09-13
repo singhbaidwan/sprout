@@ -121,3 +121,14 @@ Keep the farming identity and add a separate factory scenario. Begin with invent
 ### Follow-up instruction
 
 The owner requested that the complete current project be pushed first and that future completed features/milestones also be committed and pushed. This standing workflow is recorded in the root `AGENTS.md`. The initial commit includes the playable game, tests, README, and design documentation, rather than only a placeholder README.
+
+## 2026-09-13 — portable save foundation
+
+Requested: expand the approved farm/factory direction with more gameplay. The first milestone prepares backward-compatible saves before adding a separate factory chapter.
+
+- Added a strict version 2 portable envelope and migration from the original version 1 browser save, retaining the old storage key.
+- Added JSON export, validated import with review/confirmation, and a device-local backup before replacement.
+- Added save validation HTTP endpoint and migration, rejection, independence, and endpoint tests.
+- Added GitHub Actions for Python 3.10–3.14 and JavaScript module syntax checks. Local validation uses Python 3.14; CI execution remains remotely observable.
+- Validation: 31 Python tests passed; JS syntax and whitespace checks passed. Browser import restored a legacy fixture with 73 coins, its program, and speed; reload retained them. An invalid version was rejected without changing the current game. The embedded browser did not expose a download event for the export action, so download completion was not verified there.
+- Next authorized milestone: a separate Breadworks chapter with cargo, storage, a mill, an oven, delivery missions, and bounded Python logistics. Continuous controllers, conveyors, and multiple drones remain later proposals.

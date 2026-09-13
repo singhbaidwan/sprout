@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 
 from .engine import CROPS, MISSIONS, Farm, GameError, new_state, validate_state
 from .interpreter import run_script
+from .saves import validate_save
 
 STATIC = Path(__file__).resolve().parent.parent / "static"
 EXAMPLES = STATIC.parent / "examples"
@@ -71,6 +72,8 @@ class GameHandler(BaseHTTPRequestHandler):
             if not isinstance(payload, dict):
                 raise GameError("Expected a JSON object.")
             path = urlsplit(self.path).path
+            if path == "/api/save/validate":
+                return self.respond(200, {"save": validate_save(payload.get("save"))})
             if path == "/api/validate":
                 return self.respond(200, {"state": validate_state(payload.get("state"))})
             if path == "/api/run":

@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 from .engine import CROPS, MISSIONS, GameError, new_state
 from .interpreter import run_script
 from .saves import validate_save
+from . import cultivation
 from .world import create_game, validate_game
 from .factory import CATALOG, MISSIONS as FACTORY_MISSIONS, new_factory, Factory
 
@@ -15,7 +16,7 @@ STATIC = Path(__file__).resolve().parent.parent / "static"
 EXAMPLES = STATIC.parent / "examples"
 ASSETS = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
           "/farm.js": ("farm.js", "text/javascript"), "/factory-ui.js": ("factory-ui.js", "text/javascript"), "/style.css": ("style.css", "text/css"),
-          "/favicon.svg": ("favicon.svg", "image/svg+xml")}
+          "/cultivation-ui.js": ("cultivation-ui.js", "text/javascript"), "/favicon.svg": ("favicon.svg", "image/svg+xml")}
 MAX_BODY = 100000
 MAX_SAVE_BODY = 300000
 
@@ -57,8 +58,10 @@ class GameHandler(BaseHTTPRequestHandler):
                 "starter": "starter", "full_field": "full_field", "smart_farmer": "smart_farmer", "carrots": "carrots"
             }.items()}
             factory_examples = {name: (EXAMPLES / f"factory_{name}.py").read_text() for name in ("starter", "harvest", "bakery", "orders")}
+            care_examples = {name: (EXAMPLES / f"{name}.py").read_text() for name in ("crop_care", "irrigation")}
+            examples.update(care_examples); factory_examples.update(care_examples)
             return self.respond(200, {"state": new_state(), "crops": CROPS, "missions": MISSIONS, "examples": examples,
-                                     "chapters": {"classic": {"title": "Home farm", "state": new_state(), "missions": MISSIONS, "examples": examples},
+                                     "cultivation": cultivation.RULES, "chapters": {"classic": {"title": "Home farm", "state": new_state(), "missions": MISSIONS, "examples": examples},
                                                   "factory": {"title": "The Breadworks", "state": new_factory(), "missions": FACTORY_MISSIONS, "examples": factory_examples, "catalog": CATALOG}}})
         if path in ASSETS:
             filename, mime = ASSETS[path]
@@ -90,6 +93,10 @@ class GameHandler(BaseHTTPRequestHandler):
                 farm = create_game(validate_game(payload.get("state")))
                 message = farm.unlock(payload.get("item"))
                 return self.respond(200, {"state": farm.snapshot(), "message": message})
+            if path == "/api/settings":
+                state = validate_game(payload.get("state"))
+                message = cultivation.configure(state, payload.get("settings"))
+                return self.respond(200, {"state": state, "message": message})
             if path == "/api/order":
                 farm = create_game(validate_game(payload.get("state")))
                 if not isinstance(farm, Factory):

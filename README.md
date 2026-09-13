@@ -61,6 +61,16 @@ Select **02 · The Breadworks** at the top of the game. Its starter program turn
 
 This chapter uses one drone and finite programs. There are no conveyors, machine placement, power grids, or continuously running controllers yet. See the [Breadworks guide](docs/PLAYER_GUIDE.md#the-breadworks--factory-chapter).
 
+## Customize crop growing
+
+Open **Growing options** and independently enable:
+
+- **Fertilizer:** feed crops, buy supplies, speed up growth, and improve harvests.
+- **Irrigation:** install sprinklers, manage a shared water tank, and program refill trips.
+- **Soil health:** track nutrients, collect crop residue, and restore depleted ground with compost.
+
+Use **Smart crop care** or **Sprinkler network** from the example menu. There are three additional growing goals per chapter. Options default off and can be changed between runs; switching them off keeps equipment, supplies, and progress. See the [crop-care rules and Python API](docs/CROP_CARE.md).
+
 ## Home farm and shared features
 
 - Program a drone to move, till, plant, water, harvest, and wait.
@@ -99,7 +109,7 @@ Run from the project root:
 python3 -m unittest discover -s tests -v
 ```
 
-The 50 current tests cover both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, language limits, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
+The 69 current tests cover both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
 
 Optional JavaScript syntax checks, if Node.js is available (POSIX shell):
 
@@ -107,6 +117,7 @@ Optional JavaScript syntax checks, if Node.js is available (POSIX shell):
 node --input-type=module --check < static/app.js
 node --input-type=module --check < static/farm.js
 node --input-type=module --check < static/factory-ui.js
+node --input-type=module --check < static/cultivation-ui.js
 ```
 
 There is no build step or hot reload. After changing browser files, reload the page. Restart the Python process after changing backend files.
@@ -116,6 +127,7 @@ sprout/
 ├── run.py                  # Local server entry point
 ├── farm/
 │   ├── engine.py           # State, crops, economy, missions, upgrades
+│   ├── cultivation.py      # Optional fertilizer, irrigation, soil care
 │   ├── factory.py          # Cargo, recipes, routes, delivery goals
 │   ├── world.py            # Scenario selection and validation
 │   ├── saves.py            # Portable envelopes and legacy migration
@@ -143,6 +155,7 @@ Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/s
 | --- | --- |
 | [Requirements](docs/REQUIREMENTS.md) | Scope, game rules, and acceptance criteria |
 | [Player guide](docs/PLAYER_GUIDE.md) | Controls, examples, command API, and troubleshooting |
+| [Crop care](docs/CROP_CARE.md) | Configurable systems, supplies, equipment, and automation API |
 | [Architecture](docs/ARCHITECTURE.md) | Modules, state, execution, storage, and limits |
 | [Roadmap](docs/ROADMAP.md) | Suggested improvements and programmable factory concept |
 | [Development log](docs/DEVELOPMENT_LOG.md) | Completed work, decisions, validation, and next steps |

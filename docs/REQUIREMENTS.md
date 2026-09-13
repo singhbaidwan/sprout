@@ -81,3 +81,21 @@ Upgrades: cargo 8→16 for 50 coins, mill 4→2 ticks for 75, oven 6→3 ticks f
 Optional orders unlock at 4 lifetime delivered bread: deliver 12 more within 180 action ticks for 40 coins. Stockpiles count; a delivery on the final tick succeeds. Failed orders preserve stock, sales, and mission progress and may be retried. Best completion time and completed-order count persist.
 
 Factory scope remains fixed-layout, single-drone, finite-run simulation. Machine construction, conveyors, multiple drones, power, research, online leaderboards, and persistent controllers are future milestones. No language limit or local server boundary is relaxed for this chapter.
+
+## Configurable crop-care milestone — implemented
+
+Requested after the factory work: review The Farmer Was Replaced as a reference, deepen growing tasks with fertilizer/irrigation and related automation, and let players enable or disable complexity at their convenience.
+
+| ID | Requirement | Acceptance criterion |
+| --- | --- | --- |
+| C01 | Independent options | Fertilizer, Irrigation, and Soil health can be toggled in any of eight combinations, separately per chapter. |
+| C02 | Safe suspension | Disabling systems retains equipment, supplies, nutrients, and goals; no automatic reset or new resource grant. |
+| C03 | Fertilizer economy | Six starting doses, purchases at the well, timed growth boost, once-per-crop treatment, harvest bonus, and supply queries. |
+| C04 | Automated irrigation | Place sprinklers with 3×3 coverage, use a shared limited tank, refill at the well, and control the pump from Python. |
+| C05 | Soil cycle | Harvests deplete nutrients and produce compost; depleted soil grows slowly; compost replenishes it. |
+| C06 | Observable automation | Settings, supplies, pump status, soil inspection, sprinkler visuals, and extra goals explain current state. |
+| C07 | Runnable guidance | Two shared examples work in all option combinations and both chapters; disabled commands report a clear error. |
+| C08 | Save migration | Existing classic/factory saves acquire a disabled versioned care extension. Expansion preserves soil and sprinkler coordinates. |
+| C09 | Deterministic bounds | New actions cost one tick; queries retain operation limits; invalid actions consume no supplies or coins. |
+
+Exact implemented quantities, costs, deadlines, and APIs are in [CROP_CARE.md](CROP_CARE.md). These are game rules, not real-world agronomic guidance. Future weather/pests/diseases and continuous controllers remain outside this milestone.

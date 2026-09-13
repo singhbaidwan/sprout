@@ -1,6 +1,6 @@
 # Roadmap — from a farm to a programmable factory
 
-**Updated:** 2026-09-13. **Playable today:** Home farm and the Breadworks production chapter. Future stages below are proposals, not delivery commitments.
+**Updated:** 2026-09-13. **Playable today:** Home farm, the Breadworks production chapter, and configurable crop care in both. Future stages below are proposals, not delivery commitments.
 
 ## Direction
 
@@ -15,6 +15,7 @@ The initial inspiration was Factorio's emphasis on factories, infrastructure, re
 | Home farm | Python drone, three crops, four missions, upgrades, editor, playback, local saves. | Original campaign and examples remain covered by tests. |
 | 1 — Save foundation | Portable JSON saves, legacy migration, import validation and backup, CI configuration for Python 3.10–3.14 and JS syntax. | Published as `c42bfbe`. Local tests passed; remote CI execution is separately observable. Embedded-browser download completion was not confirmed. |
 | 2 — First production chain | Separate Breadworks scenario, cargo, chest, mill, oven, depot, recipes, obstacles and routes, live machine status, six missions, three upgrades, four examples, optional timed delivery orders. | A finite script processes harvested wheat into delivered bread with conserved items. Saves preserve both chapters and active batches. One drone, fixed buildings, no conveyors or construction yet. |
+| 2a — Crop care | Independent fertilizer, irrigation, and soil-health options; placeable sprinklers, supply management, compost, two shared scripts, and three extra goals. | All eight option combinations tested in both chapters. Existing saves migrate with options off. [Full rules](CROP_CARE.md). |
 
 ```mermaid
 flowchart LR
@@ -45,7 +46,7 @@ The game now poses several distinct problems: a full drone cannot harvest; a ful
 | --- | --- | --- |
 | 3 — Continuous operation | Resumable interpreter, shared world scheduler, per-tick instruction quotas, pause/step/checkpoints, ordered state updates. | Long-running factories stay responsive; deterministic replays match; Stop/Pause act at a documented simulation boundary. |
 | 4 — Logistics and building | A second drone, movement conflicts, placeable machines, limited-capacity conveyors, saved routes. | Controllers cooperate without duplicate items, permanent starvation, or double-speed world time. Blueprints preserve validated layouts. |
-| 5 — Deeper production | Power, research, fertilizer/byproducts, multiple recipes, varied contracts, throughput and idle-time graphs. | Players can see a bottleneck, change code, and measure improved output. |
+| 5 — Deeper production | Power, research, additional byproduct recipes, multiple recipes, varied contracts, throughput and idle-time graphs. | Players can see a bottleneck, change code, and measure improved output. |
 | 6 — Scale and sharing | Larger maps, script/blueprint sharing, performance profiling, then optional accounts and hosting. | Representative worlds meet performance budgets; public execution has an isolated deployment design. |
 
 These are independent milestones requiring scope decisions, rather than a promise to implement everything in sequence immediately. Completed authorized milestones are verified, documented, committed, and pushed before the next begins.
@@ -79,8 +80,14 @@ Classic harvests sell immediately and classic scripts assume wrapped edges. Keep
 | Input | Possible chain | Programming challenge |
 | --- | --- | --- |
 | Sunflowers | Seeds → oil press → cooking oil | Share transport capacity with wheat. |
-| Crop residue | Compost → fertilizer → higher yields | Route byproducts while keeping a reserve. |
+| Crop residue | Industrial compost → fertilizer production | Extend the existing simple compost mechanic into a machine production chain. |
 | Carrots | Washing → packing → delivery | Balance two lines supplying the same depot. |
 | Biomass | Fuel → generator → machine power | Prioritize machines when energy is scarce. |
 
 Other useful work: collect balancing feedback, improve editor diagnostics, add automated browser regression coverage, test more browsers and text zoom, and audit keyboard/screen-reader interactions. Public hosting requires a production server and isolated execution; GitHub Pages cannot run the existing Python API.
+
+## Growing-system direction
+
+Following the owner's reference to [The Farmer Was Replaced](https://store.steampowered.com/app/2060160/The_Farmer_Was_Replaced/), Sprout now lets players opt into deeper resource and maintenance loops. The store's stated emphasis on gradual programming progression and resource-funded technology informs this direction. Fertilizer, irrigation, and soil care are implemented in Sprout with its own rules, rather than inferred as exact mechanics of the reference.
+
+Future configurable modules could add weather, pests, crop rotation bonuses, and diseases. Each would need an explicit off-state behavior, bounded automation API, visible diagnosis, migration, and runnable example. None of those additional modules is included in the present crop-care release.

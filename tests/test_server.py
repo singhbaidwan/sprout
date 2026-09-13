@@ -36,10 +36,10 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         data = json.loads(body)
         self.assertEqual(data['state'], new_state())
-        self.assertEqual(len(data['examples']), 4)
+        self.assertEqual(len(data['examples']), 6)
         self.assertEqual(len(data['chapters']['factory']['missions']), 6)
         self.assertEqual(data['chapters']['factory']['state'], new_factory())
-        for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/style.css', '/favicon.svg']:
+        for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/cultivation-ui.js', '/style.css', '/favicon.svg']:
             status, headers, body = self.request('GET', asset)
             self.assertEqual(status, 200)
             self.assertGreater(len(body), 100)
@@ -80,6 +80,18 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)['state']['order']['status'], 'active')
         status, _, _ = self.request('POST', '/api/order', {'state': new_state()})
+        self.assertEqual(status, 400)
+
+    def test_growing_settings_endpoint_validates_and_preserves_world(self):
+        state = new_state()
+        settings = {'fertilizer': True, 'irrigation': False, 'soil': True}
+        status, _, body = self.request('POST', '/api/settings', {'state': state, 'settings': settings})
+        self.assertEqual(status, 200)
+        result = json.loads(body)['state']
+        self.assertEqual(result['care']['settings'], settings)
+        self.assertEqual(result['tick'], state['tick'])
+        self.assertEqual(result['tiles'], state['tiles'])
+        status, _, _ = self.request('POST', '/api/settings', {'state': state, 'settings': {'irrigation': 'on'}})
         self.assertEqual(status, 400)
 
     def test_portable_save_allows_two_maximum_length_programs(self):

@@ -1,10 +1,11 @@
+import { setupCare, updateCare, describeCare, cultivationGuide } from './cultivation-ui.js';
 import { FarmRenderer } from './farm.js';
 import { describeFactoryTile, setupFactory, updateFactory, factoryGuide } from './factory-ui.js';
 
 const $ = id => document.getElementById(id);
 const STORAGE_KEY = 'sprout.save.v2';
 const editor = $('code-editor');
-let state, crops, missions, examples, initialState, chapters, catalog;
+let state, crops, missions, examples, initialState, chapters, catalog, careRules;
 const isFactory = () => state?.scenario === 'factory';
 let mode = 'loading', queue = [], queueIndex = 0, resultError = null;
 let timer = null, toastTimer = null, saveTimer = null, requestToken = 0, controller = null;
@@ -118,6 +119,7 @@ function setMode(next, label) {
   $('import-save').disabled = busy || !state;
   document.querySelectorAll('[data-chapter]').forEach(button => { button.disabled = busy || !state; });
   if (isFactory()) updateFactory(state, catalog, busy);
+  if (state && careRules) updateCare(state, careRules, busy);
   $('runtime-status').textContent = label || ({ idle: 'Ready when you are', paused: 'Paused · step or resume', running: 'Program running', loading: 'Preparing your program', error: 'Check your program' }[mode]);
   $('runtime-dot').className = `status-dot ${mode === 'running' ? 'running' : mode === 'error' ? 'error' : ''}`;
   $('field-status').textContent = mode === 'running' ? 'Drone working' : mode === 'paused' ? 'Drone paused' : 'Drone ready';
@@ -134,6 +136,7 @@ function updateState(next, action = null) {
   renderer.update(state, action);
   updateInspector(); updateMission(); updateUpgrades();
   if (isFactory()) updateFactory(state, catalog, ['running', 'paused', 'loading'].includes(mode));
+  updateCare(state, careRules, ['running', 'paused', 'loading'].includes(mode));
 }
 
 function tileDescription(tile, x, y) {
@@ -148,7 +151,7 @@ function updateInspector() {
   if (selected && (selected.x >= state.size || selected.y >= state.size)) selected = null;
   const { x, y } = selected || state.drone;
   $('tile-title').textContent = `Plot ${x}, ${y}${x === state.drone.x && y === state.drone.y ? ' · drone here' : ''}`;
-  $('tile-detail').textContent = tileDescription(state.tiles[y * state.size + x], x, y);
+  $('tile-detail').textContent = tileDescription(state.tiles[y * state.size + x], x, y) + describeCare(state, y * state.size + x);
 }
 
 function updateMission() {
@@ -160,6 +163,7 @@ function updateMission() {
     'The farm is yours. Experiment with new crops, larger fields, and more efficient programs.',
   ];
   document.querySelector('.editor-tip p').textContent = isFactory() ? (missions[state.completed.length]?.hint || 'Campaign complete. Improve your delivery record or write your own production controller.') : tips[Math.min(state.completed.length, 4)];
+  if (Object.values(state.care.settings).some(Boolean)) document.querySelector('.editor-tip p').textContent += ' Growing options are on: Smart crop care demonstrates supply checks.';
   const mission = missions[state.completed.length];
   if (!mission) {
     $('mission-number').textContent = `ALL ${missions.length} MISSIONS COMPLETE`;
@@ -293,6 +297,7 @@ function openGuide(tab = 'learn') {
 
 function renderGuide(tab) {
   document.querySelectorAll('.guide-tab').forEach(button => button.classList.toggle('active', button.dataset.guide === tab));
+  if (tab === 'care') { $('guide-content').innerHTML = cultivationGuide(); return; }
   if (isFactory()) { $('guide-content').innerHTML = factoryGuide(tab, catalog, missions); return; }
   const content = {
     learn: `<p>You have a small patch of land, a solar-powered drone, and a Python editor. A good routine is all your farm needs.</p><ol><li><strong>Make your first harvest.</strong> The first three plots have ripe wheat. Run the starter program to harvest them, replant the row, and earn your first mission reward.</li><li><strong>Grow a crop.</strong> Use <code>till()</code>, <code>plant("wheat")</code>, then <code>water()</code>. Crops grow when the drone takes actions. Use <code>wait()</code> if you have nothing else to do.</li><li><strong>Think in loops.</strong> Load “The whole field” to plant every plot. Load “Harvest & replant” to maintain it. Each run continues from your current farm state.</li><li><strong>Make room to grow.</strong> Spend coins on carrots, sunflowers, and more land. Complete all four missions, then experiment freely.</li></ol><h3>You're in control</h3><p><strong>Run code</strong> starts or resumes a program. <strong>Pause</strong> freezes it. <strong>Step</strong> performs one drone action. <strong>Stop</strong> discards the remaining actions and keeps the changes you have already seen. Speed changes the animation, not crop growth rules.</p><h3>A few helpful details</h3><p>The field wraps at its edges. North decreases y; east increases x. Time only passes during actions. There is no battery or water refill to manage, and wheat has a free emergency seed if you run out of coins. Your farm and editor save on this device.</p><p>Use <strong>Ctrl/Cmd + Enter</strong> to run or pause, <strong>Tab</strong> for four spaces, and <strong>Shift + Tab</strong> to unindent. Select a tile or use Inspect plots to learn what it needs.</p>`,
@@ -306,7 +311,7 @@ function showPlots() {
   if (!state) return;
   const rows = state.tiles.map((tile, index) => {
     const x = index % state.size, y = Math.floor(index / state.size), here = x === state.drone.x && y === state.drone.y;
-    return `<tr class="${here ? 'current' : ''}"><td>${x}, ${y}${here ? ' · drone' : ''}</td><td>${escapeHTML(tileDescription(tile, x, y))}</td><td>${tile.water} ticks</td></tr>`;
+    return `<tr class="${here ? 'current' : ''}"><td>${x}, ${y}${here ? ' · drone' : ''}</td><td>${escapeHTML(tileDescription(tile, x, y) + describeCare(state, index))}</td><td>${tile.water} ticks</td></tr>`;
   });
   $('plots-table').innerHTML = `<table><thead><tr><th>Plot</th><th>Crop / soil</th><th>Moisture</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
   $('plots-dialog').showModal();
@@ -439,6 +444,7 @@ function activateChapter(name, game) {
   $('guide-title').textContent = factory ? 'The path from grain to bread.' : 'A small guide to big harvests.';
   document.querySelector('[data-guide="crops"]').textContent = factory ? 'Recipes & missions' : 'Crops & missions';
   const labels = factory ? {starter: 'First bread', harvest: 'Harvest & store', bakery: 'Farm to bakery', orders: 'Order runner'} : {starter: 'Your first row', full_field: 'The whole field', smart_farmer: 'Harvest & replant', carrots: 'A carrot patch'};
+  Object.assign(labels, {crop_care: 'Smart crop care', irrigation: 'Sprinkler network'});
   $('example-select').innerHTML = '<option value="">Load example</option>' + Object.keys(examples).map(key => `<option value="${key}">${labels[key]}</option>`).join('');
   createUpgrades(); setCode(game.code); $('speed-select').value = game.speed;
   updateState(game.state);
@@ -469,10 +475,25 @@ $('start-order').addEventListener('click', async () => {
   }
 });
 
+async function changeCare(settings) {
+  if (!state || !['idle', 'error'].includes(mode)) return;
+  const token = ++requestToken; controller = new AbortController();
+  setMode('loading', 'Updating growing options…');
+  try {
+    const result = await api('settings', {state, settings}, controller.signal);
+    if (token !== requestToken) return;
+    updateState(result.state); setMode('idle'); save(); log(result.message, 'success');
+  } catch (error) {
+    if (token !== requestToken) return;
+    setMode('error'); toast(error.message, true);
+  }
+}
+$('care-guide').addEventListener('click', () => openGuide('care'));
+
 async function boot() {
   try {
     const data = await api('bootstrap');
-    crops = data.crops; chapters = data.chapters; examples = chapters.classic.examples;
+    crops = data.crops; careRules = data.cultivation; setupCare(careRules, changeCare); chapters = data.chapters; examples = chapters.classic.examples;
     let restored = data.state, code = examples.starter, restoreMessage = null;
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('sprout.save.v1') || 'null');

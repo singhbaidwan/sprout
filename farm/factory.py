@@ -2,6 +2,7 @@
 
 from collections import deque
 
+from . import cultivation
 from .engine import Farm, GameError, STAT_NAMES, empty_tile, integer, validate_state
 
 ITEMS = ("wheat", "flour", "bread")
@@ -41,7 +42,7 @@ def new_factory():
         "version": 2, "scenario": "factory", "size": 8, "tick": 0, "coins": 30,
         "drone": {"x": 0, "y": 0}, "tiles": [empty_tile() for _ in range(64)],
         "unlocked": ["wheat"], "completed": [], "stats": dict.fromkeys(FACTORY_STATS, 0),
-        "cargo": inventory(), "chest": {"wheat": 12, "flour": 0, "bread": 0}, "upgrades": [],
+        "care": cultivation.new_care(8), "cargo": inventory(), "chest": {"wheat": 12, "flour": 0, "bread": 0}, "upgrades": [],
         "machines": {name: {"input": 0, "output": 0, "remaining": 0} for name in ("mill", "oven")},
         "order": {"status": "idle", "start_tick": 0, "start_delivered": 0, "best": None, "completed": 0},
     }
@@ -284,12 +285,14 @@ class Factory(Farm):
                 raise GameError("harvest() takes no arguments.")
             if not self.ready():
                 raise GameError("Nothing ripe here. Water wheat, then work elsewhere or wait().")
-            if self.cargo_space() < 3:
-                raise GameError('A harvest needs 3 cargo slots. Unload wheat at the chest or mill.')
-            s["cargo"]["wheat"] += 3
+            amount = cultivation.harvest_yield(s)
+            if self.cargo_space() < amount:
+                raise GameError(f'A harvest needs {amount} cargo slots. Unload wheat at the chest or mill.')
+            s["cargo"]["wheat"] += amount
+            cultivation.harvested(s, "wheat")
             s["stats"]["harvested"] += 1
             self.tile.update(crop=None, growth=0)
-            message = "Harvested 3 wheat into drone cargo"
+            message = f"Harvested {amount} wheat into drone cargo"
         else:
             return super().action(name, *args)
         self.advance()

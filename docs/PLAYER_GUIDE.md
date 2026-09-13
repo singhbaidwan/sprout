@@ -28,6 +28,8 @@ Keyboard: **Ctrl/Cmd + Enter** runs, pauses, or resumes. **Tab** indents by four
 
 ## Home farm crop lifecycle
 
+These are the default rules. Optional [crop-care systems](CROP_CARE.md) change fertilizer bonuses, water supply, and soil nutrients when enabled.
+
 ```python
 # Use an empty plot first.
 till()
@@ -190,3 +192,11 @@ Timed orders unlock after 4 bread delivered. They count bread delivered **after*
 - **Order failed:** stock ingredients first, increase batch sizes, overlap machine work, and reduce empty trips. Progress and coins from regular sales are kept.
 
 Export/import includes both chapters, their code, and playback speeds. Save files must be under 290 KB; the server allows 300 KB for save validation to accommodate two maximum-length programs. The run API still has its original 100 KB request limit.
+
+## Optional growing systems
+
+Open **Growing options** above the field. Fertilizer, Irrigation, and Soil health can each be enabled independently in either chapter. Defaults are off; old saves keep their original rules. Changes are available between runs and do not reset equipment or supplies.
+
+The **Smart crop care** example automates nutrients, fertilizer, watering, well visits, and factory cargo checks. **Sprinkler network** installs automated watering coverage as funds allow. These are two additional shared examples alongside the four chapter-specific examples.
+
+See [CROP_CARE.md](CROP_CARE.md) for the complete rules, costs, sensor API, toggle behavior, and three optional growing goals. The in-game **Growing systems** guide contains the same operational reference. With options on, older simple examples may need supply and yield checks; use the new examples as starting points.

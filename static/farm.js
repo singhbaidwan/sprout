@@ -174,7 +174,8 @@ export class FarmRenderer {
       const tile = s.tiles[y*n+x], p = this.point(x+.5,y+.5);
       const factory = s.scenario === 'factory';
       const paved = factory && (x >= this.catalog.field.width || y >= this.catalog.field.height);
-      const base = paved ? ((x+y)%2 ? '#d3d5bb' : '#dcdec7') : tile.tilled ? (tile.water ? '#99896b' : '#b39c77') : ((x+y)%2 ? '#c2ce9a' : '#cbd5a4');
+      const poorSoil = s.care.settings.soil && s.care.plots[y*n+x].nutrients < 30;
+      const base = poorSoil && tile.tilled ? '#c2ad91' : paved ? ((x+y)%2 ? '#d3d5bb' : '#dcdec7') : tile.tilled ? (tile.water ? '#99896b' : '#b39c77') : ((x+y)%2 ? '#c2ce9a' : '#cbd5a4');
       this.diamond(p.x,p.y,u-1,v-1,base,tile.tilled ? '#a8906d' : '#b8c58f');
       if (tile.tilled) {
         for (let j = -.5; j <= .5; j += .5) {
@@ -199,6 +200,20 @@ export class FarmRenderer {
       if (tile.crop) {
         for (const [dx,dy] of [[-.3,-.02],[.26,-.03],[0,.29]]) this.crop(p.x+dx*u,p.y+dy*v,tile);
       }
+    }
+    for (const index of s.care.sprinklers) {
+      const p=this.point(index%n+.5,Math.floor(index/n)+.5);
+      const active=s.care.settings.irrigation && s.care.pump && s.care.tank>0;
+      this.ellipse(p.x,p.y-3,u*.19,u*.1,active?'#80b5be':'#9aab9c');
+      this.line(p.x,p.y-3,p.x,p.y-13,'#638b90',2);
+      this.line(p.x-5,p.y-13,p.x+5,p.y-13,active?'#d3f0eb':'#aebeb4',2);
+      if(active && !this.reduced.matches) {
+        const phase=(time%1200)/1200;
+        this.ellipse(p.x,p.y-5,u*.7*phase,v*.7*phase,'#9bcad124');
+      }
+    }
+    if(s.care.settings.fertilizer) for(let i=0;i<s.care.plots.length;i++) {
+      if(s.care.plots[i].fertilized) {const p=this.point(i%n+.5,Math.floor(i/n)+.5);this.ellipse(p.x+u*.42,p.y-8,2.5,2.5,'#f2de95');}
     }
     // Labels sit above the finished ground layer so foreground tiles cannot erase them.
     if(s.scenario==='factory') for(const [name,entity] of Object.entries(this.catalog.entities)) {

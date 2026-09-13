@@ -2,6 +2,9 @@
 
 from copy import deepcopy
 
+from .common import GameError, integer
+from . import cultivation
+
 CROPS = {
     "wheat": {"seed": 1, "sale": 5, "growth": 6, "unlock": 0},
     "carrot": {"seed": 3, "sale": 12, "growth": 9, "unlock": 40},
@@ -16,10 +19,6 @@ MISSIONS = [
 STAT_NAMES = ("harvested", "planted", "carrots", "earned", "actions")
 
 
-class GameError(ValueError):
-    """An actionable player-facing error."""
-
-
 def empty_tile():
     return {"tilled": False, "crop": None, "growth": 0, "water": 0}
 
@@ -30,17 +29,11 @@ def new_state():
         "drone": {"x": 0, "y": 0},
         "tiles": [empty_tile() for _ in range(36)],
         "unlocked": ["wheat"], "completed": [],
-        "stats": {name: 0 for name in STAT_NAMES},
+        "stats": {name: 0 for name in STAT_NAMES}, "care": cultivation.new_care(6),
     }
     for x in range(3):
         state["tiles"][x] = {"tilled": True, "crop": "wheat", "growth": 6, "water": 0}
     return state
-
-
-def integer(value, low, high, label):
-    if type(value) is not int or not low <= value <= high:
-        raise GameError(f"Invalid {label}: expected an integer from {low} to {high}.")
-    return value
 
 
 def validate_state(raw):
@@ -81,6 +74,8 @@ def validate_state(raw):
             growth = integer(tile["growth"], 0, CROPS[crop]["growth"] if crop else 0, "crop growth")
             water = integer(tile["water"], 0, 24, "moisture")
             state["tiles"].append({"tilled": tile["tilled"], "crop": crop, "growth": growth, "water": water})
+        care_state = dict(state, scenario=raw.get("scenario", "classic"))
+        state["care"] = cultivation.validate_care(raw["care"], care_state) if "care" in raw else cultivation.new_care(size)
         return state
     except (KeyError, TypeError, IndexError) as exc:
         raise GameError("This save is incomplete or malformed.") from exc
@@ -109,12 +104,15 @@ class Farm:
         s = self.state
         s["tick"] += 1
         s["stats"]["actions"] += 1
-        for tile in s["tiles"]:
+        cultivation.irrigate(s)
+        for index, tile in enumerate(s["tiles"]):
             if tile["water"]:
                 if tile["crop"]:
-                    tile["growth"] = min(CROPS[tile["crop"]]["growth"], tile["growth"] + 1)
+                    tile["growth"] = min(CROPS[tile["crop"]]["growth"], tile["growth"] + cultivation.growth_amount(s, index))
                 tile["water"] -= 1
+        cultivation.after_growth(s)
         self.advance_systems()
+        cultivation.goals(s, self.events)
         while len(s["completed"]) < len(self.missions):
             mission = self.missions[len(s["completed"])]
             if s["stats"][mission["stat"]] < mission["target"]:
@@ -130,7 +128,9 @@ class Farm:
         s, tile = self.state, self.tile
         self.events = []
         position = f"({s['drone']['x']}, {s['drone']['y']})"
-        if name == "move":
+        if name in cultivation.ACTIONS:
+            message = cultivation.action(self, name, args)
+        elif name == "move":
             if len(args) != 1 or args[0] not in ("north", "south", "east", "west"):
                 raise GameError('Use move("north"), "south", "east", or "west".')
             dx, dy = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}[args[0]]
@@ -164,6 +164,10 @@ class Farm:
                 tile["tilled"] = True
                 message = f"Prepared soil at {position}"
             elif name == "water":
+                if s["care"]["settings"]["irrigation"]:
+                    if s["care"]["tank"] < cultivation.RULES["manual_water_cost"]:
+                        raise GameError("The water tank is empty. Use refill_tank() at (0, 0).")
+                    s["care"]["tank"] -= cultivation.RULES["manual_water_cost"]
                 tile["water"] = 24
                 message = f"Watered plot at {position}"
             elif name == "harvest":
@@ -171,6 +175,9 @@ class Farm:
                     raise GameError("Nothing ripe here yet. Water your crop, then wait or work on other plots.")
                 crop = tile["crop"]
                 income = CROPS[crop]["sale"]
+                if cultivation.quality(s):
+                    income += income // 2
+                cultivation.harvested(s, crop)
                 s["coins"] += income
                 s["stats"]["earned"] += income
                 s["stats"]["harvested"] += 1
@@ -202,6 +209,7 @@ class Farm:
             old = self.state["tiles"]
             self.state["tiles"] = [old[y * 6 + x] if x < 6 and y < 6 else empty_tile() for y in range(8) for x in range(8)]
             self.state["size"] = 8
+            cultivation.expand(self.state, 6)
         else:
             self.state["unlocked"].append(item)
         return f"Unlocked {item}!"

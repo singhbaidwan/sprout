@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from .engine import GameError
 from .world import create_game
 from .factory import Factory
+from . import cultivation
 
 MAX_SOURCE = 16000
 MAX_NODES = 2500
@@ -22,7 +23,7 @@ QUERIES = {"can_harvest", "get_crop", "get_water", "get_x", "get_y", "get_size",
 BUILTINS = {"range", "len", "min", "max", "abs", "int", "str", "print"}
 FACTORY_ACTIONS = {"load", "unload", "navigate_to"}
 FACTORY_QUERIES = {"cargo", "cargo_space", "stored", "free_space", "machine_status", "get_tick", "get_delivered"}
-RESERVED = ACTIONS | QUERIES | BUILTINS | FACTORY_ACTIONS | FACTORY_QUERIES
+RESERVED = ACTIONS | QUERIES | BUILTINS | FACTORY_ACTIONS | FACTORY_QUERIES | cultivation.ACTIONS | cultivation.QUERIES
 ALLOWED = (
     ast.Module, ast.Expr, ast.Assign, ast.AugAssign, ast.If, ast.For,
     ast.While, ast.FunctionDef, ast.Return, ast.Break, ast.Continue, ast.Pass,
@@ -260,6 +261,8 @@ class Interpreter:
 
     def call(self, name, args):
         self.consume()
+        if name in cultivation.QUERIES:
+            return cultivation.query(self.farm.state, name, args)
         if name in FACTORY_ACTIONS | FACTORY_QUERIES:
             if not isinstance(self.farm, Factory):
                 raise GameError(f"{name}() belongs to the Breadworks chapter. Switch chapters to try it.")
@@ -269,7 +272,7 @@ class Interpreter:
                 return None
             if name in FACTORY_QUERIES:
                 return self.farm.query(name, args)
-        if name in ACTIONS | FACTORY_ACTIONS:
+        if name in ACTIONS | FACTORY_ACTIONS | cultivation.ACTIONS:
             if self.actions >= MAX_ACTIONS:
                 raise ScriptError("Run reached 400 drone actions. Run again to continue, or use a smaller loop.", self.line)
             message = self.farm.action(name, *args)

@@ -20,6 +20,9 @@ farm.js: responsive canvas world        POST /api/run → interpreter → Farm /
 | --- | --- |
 | `run.py` | CLI arguments, loopback server startup, useful startup failure, clean shutdown. |
 | `farm/engine.py` | Rules, state construction/validation, crop growth, actions, economy, missions, expansion. |
+| `farm/common.py` | Shared actionable error and integer validation primitives. |
+| `farm/cultivation.py` | Versioned optional care state, configuration, supplies, irrigation, growth modifiers, harvest effects, goals, and APIs. |
+| `static/cultivation-ui.js` | Options, supply/goal dashboard, inspection text, and crop-care guide. |
 | `farm/factory.py` | Breadworks catalog, inventories, recipes, routes, upgrades, missions, orders, and strict world validation. |
 | `farm/world.py` | Explicit scenario selection and validation; classic and factory state versions remain distinct. |
 | `farm/saves.py` | Portable envelopes, chapter/world matching, legacy migration. |
@@ -80,10 +83,11 @@ All POST requests require `Content-Type: application/json`. Run/upgrade/order re
 
 | Endpoint | Input | Output |
 | --- | --- | --- |
-| `GET /api/bootstrap` | None | `{state, crops, missions, examples, chapters}` |
+| `GET /api/bootstrap` | None | `{state, crops, missions, examples, chapters, cultivation}` |
 | `POST /api/validate` | `{state}` | `{state}` rebuilt from known fields |
 | `POST /api/run` | `{state, code}` | `{frames, error, actions, operations}` |
 | `POST /api/unlock` | `{state, item}` | `{state, message}` |
+| `POST /api/settings` | `{state, settings}` with three booleans | `{state, message}`; change growing options without ticking |
 | `POST /api/order` | `{state}` in factory chapter | `{state, message}`; start/retry a timed order |
 | `POST /api/save/validate` | `{save}` | `{save}`; validate/migrate the portable chapter envelope |
 
@@ -105,7 +109,7 @@ Add crops and missions in `engine.py`, update renderer visuals and workshop meta
 
 ## Breadworks simulation boundary
 
-`Factory` shares the existing crop rules, snapshot mechanism, and action clock with `Farm`. The base `advance()` increments tick/actions, grows crops, invokes `advance_systems()` once, then checks the scenario's sequential missions. Factory systems advance the mill and oven, resolve the active order, and append events. One action therefore advances all systems exactly once; no extra ticking occurs for each machine.
+`Factory` shares the existing crop rules, snapshot mechanism, and action clock with `Farm`. The base `advance()` increments tick/actions, applies irrigation pulses, grows crops with optional soil/fertilizer modifiers, reduces boost timers, invokes `advance_systems()` once, then checks care goals and the scenario's sequential missions. Factory systems advance the mill and oven, resolve the active order, and append events. One action therefore advances all systems exactly once; no extra ticking occurs for each machine.
 
 Factory `harvest` overrides classic selling to add three wheat to cargo. Moves use bounded terrain instead of wrapping. Transfer actions check item, positive integer amount, location, available stock, and destination capacity before mutation. Inventories are simple fixed item maps. The source consumes items and destination receives them atomically; the subsequent machine phase may start a batch on newly delivered input.
 
@@ -118,3 +122,15 @@ The item-conservation test compares wheat-equivalent quantities across cargo, ch
 Factory saves include cargo, chest, machine input/output/remaining, upgrades, additional production stats, six mission IDs, and order status/start tick/start delivered/best time/completed count. Known fields are rebuilt and bounds validated. Save validation is consistency checking for an editable local game, not server-authoritative anti-cheat.
 
 The UI stores an active chapter plus per-chapter state/code/speed. Chapter changes and order starts are disabled during request preparation or playback. Stop invalidates request tokens; late responses cannot overwrite a reset or a newer operation. Reset affects only the active chapter. Full frame snapshots are retained for this small fixed map; continuous controllers, multiple drones, and larger worlds require the scheduler and checkpoint work in the roadmap.
+
+## Optional cultivation extension
+
+Both chapters carry `care.version = 1`: three independent settings, one care record per tile (nutrients/boost/fertilized), fertilizer/compost/tank supplies, pump state, installed sprinkler indices, care statistics, and completed independent goals. Missing extensions migrate explicitly to defaults with all rules disabled. Existing malformed extensions fail validation. `farm/common.py` holds validation primitives so the care system and base engine avoid cyclic imports.
+
+The irrigation phase precedes crop growth on every sixth world tick. Sprinklers run in installation order, checking bounded 3×3 areas and spending one tank unit only when at least one covered plot needs moisture. Each target is capped at the moisture threshold before the growth/moisture phase. The crop-growth modifier returns 0 for depleted soil on odd ticks, otherwise 1 plus an active fertilizer boost. Boost timers decrease once per action only when the feature is enabled.
+
+Harvest handlers calculate sale/yield bonuses before the care harvest hook clears treatment, depletes optional nutrients, and collects optional compost. Factory cargo-capacity checks use the actual 3-or-4 yield before mutation. Care supplies are a separate bounded store, not cargo or machine ingredients. The default item-conservation tests still cover base factory production; additional tests cover fertilized yields and resource consumption.
+
+Configurations are validated as exactly three booleans and applied without ticking. Browser request tokens protect settings changes from late responses, and controls are disabled during playback. Toggling off does not remove inventory or equipment. Crop removal always clears its treatment. Expansion remaps the care grid and sprinkler indices with the same coordinate-preservation rule as crops.
+
+Shared examples query scenario and enabled features, illustrating independent systems without requiring imports or player access to host objects. All original interpreter limits and local-only hosting assumptions remain in effect.

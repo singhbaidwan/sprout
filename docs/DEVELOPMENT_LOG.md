@@ -158,3 +158,35 @@ Requested: expand the approved farm/factory direction with more gameplay. The fi
 ### Follow-up requested during implementation
 
 The owner supplied The Farmer Was Replaced as a reference and explicitly requested optional, configurable fertilizer, irrigation, and other crop-growing automation. Reviewed the [developer's Steam description](https://store.steampowered.com/app/2060160/The_Farmer_Was_Replaced/), which describes Python-like drone programming, resource-funded technology, and continuous progression. Next authorized milestone: individually toggleable crop-care systems with automation APIs and save compatibility. These are not part of this factory commit yet.
+
+## 2026-09-13 — configurable crop-growing systems
+
+### Request and scope
+
+The owner asked to deepen crop-growing automation after reviewing The Farmer Was Replaced, explicitly requesting fertilizer, irrigation, related growing tasks, and options players can turn on or off. Published the preceding Breadworks milestone as `86c9a09` before starting this work.
+
+Reviewed the game's official Steam description. Its stated progression through programming concepts and resource-funded technology informed Sprout's modular direction. Exact mechanics, quantities, API names, and toggle behavior in this milestone are Sprout's own design, documented in [CROP_CARE.md](CROP_CARE.md).
+
+### Implemented work
+
+- Added independent **Fertilizer**, **Irrigation**, and **Soil health** switches in both chapters. Changes apply between runs without consuming time, resetting progress, or granting replacement supplies.
+- Added a versioned `care` world extension with soil records, treatment/boost flags, supplies, pump state, sprinkler locations, statistics, and three optional growing goals. Old saves migrate with every option disabled.
+- Added consumable fertilizer, purchases at the (0,0) supply well, six-tick growth boosts, nutrient restoration, and chapter-specific harvest bonuses. Factory capacity checks use actual harvest yield before mutation.
+- Added placeable 3×3 sprinklers, a shared 60-water tank, deterministic six-tick watering pulses, manual-water consumption, well refills, and programmable pump control.
+- Added per-crop nutrient depletion, slower growth on poor soil, compost from harvested residue, and compost application. Disabling soil rules preserves soil records.
+- Added six bounded actions and seven sensors. Shared validation primitives live in `farm/common.py`; crop-care systems stay separate from factory processing.
+- Added **Smart crop care** and **Sprinkler network** examples to both chapter menus, settings/supply/goal UI, soil/treatment inspection, sprinkler rendering, and a Growing systems guide.
+- Updated requirements, architecture, player guide, README, roadmap, and the standalone crop-care reference. Existing simple examples remain available; the UI points players to supply-aware scripts when optional systems are on.
+
+### Verification
+
+- **69 Python tests passed**, including HTTP settings validation. New tests cover old-world migration, all eight option combinations in both chapters, strict settings, failed actions without mutations, fertilizer consumption and bonuses, depleted-soil timing, compost recovery, irrigation overlap/tank/pump/refill behavior, factory shared clock, save suspension, and expansion remapping.
+- Original classic and factory campaigns still pass with options off. Existing interpreter limits and loopback-only hosting are retained.
+- All four JavaScript modules passed syntax checks; whitespace checks passed.
+- Browser: enabled all three systems on the classic 73-coin test fixture and ran Smart crop care. It completed 32 actions with 106 coins, 3 harvests, 6 fertilizer applications, 3 compost collected, 2 sprinklers, and 47/60 tank water.
+- Disabled Irrigation, switched to Breadworks (which retained its own disabled options), switched back, and reloaded. Classic retained two enabled systems, equipment, supplies, program, and tick 32.
+- Inspected desktop and mobile option layouts, field visuals, and supply/goal controls. Mobile content/client widths both measured 431 CSS pixels; no horizontal overflow. Browser logs reported no warnings/errors in the checked session.
+
+### Remaining work
+
+The game still uses finite single-drone programs and fixed factory buildings. Continuous controllers, conveyors, additional industrial recipes, weather, pests, and disease modules remain future work. Crop-care options can be changed between runs; Stop first if a program is running. Remote CI status and embedded-browser download completion were not verified in this milestone; local tests and save validation were verified as above.

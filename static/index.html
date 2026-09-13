@@ -17,9 +17,10 @@
   </header>
 
   <main>
+    <section class="chapter-bar" aria-label="Choose chapter"><div><span class="eyebrow">YOUR NEXT ADVENTURE</span><p id="chapter-description">A new chapter: turn wheat into bread with machines and Python logistics.</p></div><div class="chapter-buttons"><button id="chapter-classic" data-chapter="classic" aria-pressed="true">01 · Home farm</button><button id="chapter-factory" data-chapter="factory" aria-pressed="false">02 · The Breadworks <span>NEW</span></button></div></section>
     <section class="page-heading" aria-labelledby="page-title">
       <div><div class="eyebrow"><span class="tiny-leaf" aria-hidden="true">✳</span> A LITTLE CODE. A LOT OF GROWTH.</div><h1 id="page-title">Your farm, on autopilot.</h1><p>Write Python. Fly your drone. Grow something good.</p></div>
-      <div class="stats" aria-label="Farm statistics"><div class="stat"><span class="stat-icon coin-icon" aria-hidden="true">C</span><div><strong id="coins">20</strong><span>coins</span></div></div><div class="stat"><span class="stat-icon harvest-icon" aria-hidden="true">♧</span><div><strong id="harvests">0</strong><span>harvested</span></div></div><div class="stat tick-stat"><span class="stat-icon" aria-hidden="true">◷</span><div><strong id="ticks">0</strong><span>farm ticks</span></div></div></div>
+      <div class="stats" aria-label="Farm statistics"><div class="stat"><span class="stat-icon coin-icon" aria-hidden="true">C</span><div><strong id="coins">20</strong><span>coins</span></div></div><div class="stat"><span class="stat-icon harvest-icon" aria-hidden="true">♧</span><div><strong id="harvests">0</strong><span id="harvest-label">harvested</span></div></div><div class="stat tick-stat"><span class="stat-icon" aria-hidden="true">◷</span><div><strong id="ticks">0</strong><span>farm ticks</span></div></div></div>
     </section>
 
     <div id="connection-error" class="notice error-notice" role="alert" hidden></div>
@@ -37,6 +38,13 @@
         </section>
 
         <section class="mission-card" aria-labelledby="mission-title"><div class="mission-symbol" aria-hidden="true">⚑</div><div class="mission-content"><div class="mission-eyebrow"><span id="mission-number">MISSION 01 / 04</span><span id="mission-reward">+20 coins</span></div><h2 id="mission-title">A little honest work</h2><p id="mission-description">Harvest 3 crops with your drone.</p><div class="progress-row"><progress id="mission-progress" max="3" value="0" aria-label="Current mission progress"></progress><span id="mission-count">0 / 3</span></div></div><button class="mission-help" id="mission-hint" aria-label="Show mission hint" title="Show mission hint">?</button></section>
+
+        <section class="panel production-panel" id="production-panel" aria-labelledby="production-title" hidden>
+          <div class="panel-heading"><h2 id="production-title">Your production line</h2><span class="pill">Wheat → flour → bread</span></div>
+          <div class="cargo-bar"><strong>Drone cargo <span id="cargo-count">0 / 8</span></strong><span id="cargo-items">0 wheat · 0 flour · 0 bread</span></div>
+          <div id="production-cards" class="production-cards"></div>
+          <div class="order-card"><div><h3>Village delivery order</h3><p id="order-detail"></p><progress id="order-progress" value="0" max="12" aria-label="Timed delivery order progress"></progress><small id="order-best"></small></div><button id="start-order" class="secondary-button" disabled>Start order</button></div>
+        </section>
 
         <section class="workshop" aria-labelledby="workshop-title"><div class="section-heading"><h2 id="workshop-title">Room to grow</h2><span>Turn good harvests into new possibilities.</span></div><div id="upgrade-list" class="upgrade-list"></div></section>
       </div>
@@ -59,7 +67,7 @@
   <div id="toast" class="toast" role="status" hidden></div>
   <dialog id="import-dialog" class="small-dialog"><div class="dialog-heading"><h2>Restore this save?</h2><button class="icon-button close-dialog" aria-label="Cancel import">×</button></div><p id="import-summary"></p><p>Your current save will be backed up on this device before replacement. Export it first for a portable copy.</p><div class="dialog-actions"><button class="secondary-button close-dialog">Keep current game</button><button class="primary-button" id="import-confirm">Restore save</button></div></dialog>
   <dialog id="guide-dialog" class="guide-dialog"><div class="dialog-heading"><div><div class="eyebrow">THE FIELD GUIDE</div><h2 id="guide-title">A small guide to big harvests.</h2></div><button class="icon-button close-dialog" aria-label="Close guide">×</button></div><div class="guide-tabs"><button class="guide-tab active" data-guide="learn">How to play</button><button class="guide-tab" data-guide="api">Python API</button><button class="guide-tab" data-guide="crops">Crops & missions</button></div><div id="guide-content" class="guide-content"></div></dialog>
-  <dialog id="reset-dialog" class="small-dialog"><div class="dialog-heading"><h2>Plant a fresh beginning?</h2><button class="icon-button close-dialog" aria-label="Cancel reset">×</button></div><p>This resets your farm, coins, missions, and code in this browser. Your current progress will be lost.</p><div class="dialog-actions"><button class="secondary-button close-dialog">Keep my farm</button><button class="primary-button" id="reset-confirm">Start fresh</button></div></dialog>
+  <dialog id="reset-dialog" class="small-dialog"><div class="dialog-heading"><h2>Plant a fresh beginning?</h2><button class="icon-button close-dialog" aria-label="Cancel reset">×</button></div><p>This resets the current chapter, its coins, missions, and program. Your other chapter is kept. Export a save first if you want a backup.</p><div class="dialog-actions"><button class="secondary-button close-dialog">Keep my farm</button><button class="primary-button" id="reset-confirm">Start fresh</button></div></dialog>
   <dialog id="plots-dialog" class="plots-dialog"><div class="dialog-heading"><h2>Field inspection</h2><button class="icon-button close-dialog" aria-label="Close field inspection">×</button></div><p>Coordinates start at the northwest corner. The drone's current plot is marked.</p><div id="plots-table"></div></dialog>
   <script type="module" src="/app.js"></script>
 </body>

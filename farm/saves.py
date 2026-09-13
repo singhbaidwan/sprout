@@ -1,6 +1,7 @@
 """Validate portable saves and migrate the original single-farm envelope."""
 
-from .engine import GameError, validate_state
+from .engine import GameError
+from .world import validate_game
 
 
 def validate_save(raw):
@@ -11,7 +12,7 @@ def validate_save(raw):
     if raw.get("format") != "sprout-save" or type(raw.get("version")) is not int or raw["version"] != 2:
         raise GameError("This save format or version is not supported.")
     games = raw.get("games")
-    if not isinstance(games, dict) or not games or set(games) - {"classic"}:
+    if not isinstance(games, dict) or not games or set(games) - {"classic", "factory"}:
         raise GameError("The save contains an unknown or missing chapter.")
     active = raw.get("active")
     if type(active) is not str or active not in games:
@@ -25,5 +26,8 @@ def validate_save(raw):
             raise GameError("Saved programs must be text under 16,000 characters.")
         if type(speed) is not str or speed not in ("1", "2", "4", "8"):
             raise GameError("Invalid playback speed in this save.")
-        clean["games"][name] = {"state": validate_state(game.get("state")), "code": code, "speed": speed}
+        state = validate_game(game.get("state"))
+        if state.get("scenario", "classic") != name:
+            raise GameError("The saved world does not match its chapter.")
+        clean["games"][name] = {"state": state, "code": code, "speed": speed}
     return clean

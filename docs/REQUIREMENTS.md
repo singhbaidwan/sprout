@@ -30,7 +30,7 @@ Build a browser game in an initially empty repository where the player automates
 | F09 | Accessible interface | Semantic controls, visible focus, keyboard editor support, reduced motion, and responsive layouts. |
 | F10 | Reproducible project | One-command local launch, automated engine/interpreter/API tests, and maintained documentation. |
 
-## Game rules
+## Home farm rules
 
 - Field coordinates start at `(0, 0)` in the northwest; x increases east, y increases south. Moving off an edge wraps around.
 - The drone begins at `(0, 0)`. Three ripe wheat plots and 20 coins provide a quick start.
@@ -55,3 +55,29 @@ Build a browser game in an initially empty repository where the player automates
 ## Definition of done
 
 The documented launch command serves the game; a first-time player can run an example, harvest, complete a mission, and purchase an unlock. Valid saved state survives reload. Script failures and stop retain only already-played changes. Automated tests and a real-browser pass validate primary interactions. Documentation describes implemented features and distinguishes remaining work.
+
+## Breadworks expansion — implemented requirements
+
+The approved next milestone adds a separate factory chapter to give players distinct logistics and optimization problems while retaining Home farm. It does not authorize or implement the entire future roadmap.
+
+| ID | Requirement | Acceptance criterion |
+| --- | --- | --- |
+| B01 | Separate chapters | Switching preserves each chapter's world, program, and speed. Existing version 1 saves migrate into Home farm. |
+| B02 | Cargo economy | Each ripe wheat plot yields 3 wheat, no automatic sale. Shared drone capacity starts at 8. |
+| B03 | Typed inventories | Chest holds 48 items; machines have 12 input and 8 output slots. Invalid transfers leave items and time unchanged. |
+| B04 | Production chain | Mill consumes 2 wheat per flour in 4 ticks; oven consumes 1 flour per bread in 6 ticks. Full outputs stop new batches. |
+| B05 | Action clock | Each successful action advances every watered crop and each machine once. Queries and wall time do not advance the world. |
+| B06 | Navigable map | Fixed 8×8 map with 24 growing plots, four building pads, and three rocks. Navigation yields visible one-tile actions with no wrapping or teleportation. |
+| B07 | Factory programming | Named navigation, load/unload, cargo/storage/capacity queries, machine status, ticks, and lifetime deliveries fit the bounded interpreter. |
+| B08 | Progression | Six sequential missions, three purchased upgrades, and repeatable timed delivery orders provide goals after the starter. |
+| B09 | Feedback | Canvas buildings, tile inspection, cargo counts, input/output buffers, processing progress, bottleneck messages, and order timer reflect displayed state. |
+| B10 | Recoverable saves | Save validation preserves inventories, upgrades, in-flight batches, and active orders. Export/import includes both chapters. |
+| B11 | Playable examples | Starter, whole-field tending, repeatable farm-to-bakery, and stock-processing order scripts work within action limits. |
+
+Factory starts with 30 coins, four ripe wheat plots, and 12 wheat in the chest. Growing area is x 0–5, y 0–3. Building pads are chest (0,6), mill (3,6), oven (6,6), depot (7,3). Rocks are (6,2), (6,3), (3,4). The depot buys bread for 8 coins each.
+
+Upgrades: cargo 8→16 for 50 coins, mill 4→2 ticks for 75, oven 6→3 ticks for 90. They do not consume a simulation tick. Existing batches keep their remaining duration. Mission goals are 4 flour, 4 baked bread, 4 delivered bread, 12 harvested plots, 20 delivered bread, and 50 delivered bread; rewards are 15, 20, 30, 40, 80, 150 coins respectively.
+
+Optional orders unlock at 4 lifetime delivered bread: deliver 12 more within 180 action ticks for 40 coins. Stockpiles count; a delivery on the final tick succeeds. Failed orders preserve stock, sales, and mission progress and may be retried. Best completion time and completed-order count persist.
+
+Factory scope remains fixed-layout, single-drone, finite-run simulation. Machine construction, conveyors, multiple drones, power, research, online leaderboards, and persistent controllers are future milestones. No language limit or local server boundary is relaxed for this chapter.

@@ -38,7 +38,7 @@ export class FarmRenderer {
     this.layout();
     if (first || this.reduced.matches || Math.abs(this.drone.x - state.drone.x) > 2 || Math.abs(this.drone.y - state.drone.y) > 2) this.drone = { ...state.drone };
     if (action === 'harvest' || action === 'water' || action === 'plant') this.effect = { action, x: state.drone.x, y: state.drone.y, start: performance.now() };
-    this.canvas.setAttribute('aria-label', `${state.size} by ${state.size} farm. Drone at ${state.drone.x}, ${state.drone.y}. ${state.stats.harvested} crops harvested. Use Inspect plots for details.`);
+    this.canvas.setAttribute('aria-label', `${state.scenario === 'factory' ? 'Breadworks with chest, mill, oven, and delivery depot. ' : ''}${state.size} by ${state.size} farm. Drone at ${state.drone.x}, ${state.drone.y}. ${state.stats.harvested} crops harvested. Use Inspect plots for details.`);
     this.draw(performance.now());
   }
   point(x, y) { return { x: this.originX + (x - y) * this.unit, y: this.originY + (x + y) * this.half }; }
@@ -135,6 +135,30 @@ export class FarmRenderer {
       this.ellipse(x, y - height, 3 * scale, 3 * scale, '#8c7950');
     }
   }
+  building(name, p, time) {
+    const c = this.ctx, u = this.unit, z = u * .55;
+    const colors = {chest: ['#b39463','#8c734d','#d3b67e'], mill: ['#dbd9bc','#aaa98c','#7f987f'], oven: ['#c99173','#996e57','#d3ad87'], depot: ['#99b3a0','#6a8975','#cbd7ba']}[name];
+    this.diamond(p.x,p.y,u*.9,this.half*.85,'#ecebd9','#b8baa0');
+    this.polygon([[p.x-z,p.y-z*.4],[p.x,p.y],[p.x,p.y-z],[p.x-z,p.y-z*1.4]], colors[0]);
+    this.polygon([[p.x,p.y],[p.x+z,p.y-z*.4],[p.x+z,p.y-z*1.4],[p.x,p.y-z]],colors[1]);
+    this.diamond(p.x,p.y-z*1.4,z,z*.4,colors[2],'#7f866b');
+    if(name==='mill') {
+      const angle = this.state.machines.mill.remaining && !this.reduced.matches ? time/550 : .6;
+      const cx=p.x, cy=p.y-z*1.9;
+      for(let i=0;i<4;i++) { const a=angle+i*Math.PI/2; this.line(cx,cy,cx+Math.cos(a)*z*.9,cy+Math.sin(a)*z*.9,'#f9f5da',3); }
+      this.ellipse(cx,cy,2,2,'#667760');
+    } else if(name==='oven') {
+      this.polygon([[p.x+z*.15,p.y-z*.5],[p.x+z*.7,p.y-z*.72],[p.x+z*.7,p.y-z*.24],[p.x+z*.15,p.y-z*.02]],'#655346');
+      this.ellipse(p.x+z*.43,p.y-z*.4,z*.17,z*.14,this.state.machines.oven.remaining?'#f1c273':'#b49b74');
+      c.fillStyle='#9e8065';c.fillRect(p.x+z*.35,p.y-z*2,z*.3,z*.7);
+    } else if(name==='chest') {
+      this.line(p.x-z*.55,p.y-z*1.5,p.x-z*.55,p.y-z*.6,'#eee2af',2);
+      this.line(p.x+z*.55,p.y-z*1.5,p.x+z*.55,p.y-z*.6,'#eee2af',2);
+    } else {
+      this.line(p.x-z*.65,p.y-z*.3,p.x-z*.65,p.y-z*2.5,'#6b8068',2);
+      this.polygon([[p.x-z*.65,p.y-z*2.5],[p.x+z*.05,p.y-z*2.3],[p.x-z*.65,p.y-z*1.9]],'#d9be79');
+    }
+  }
   draw(time) {
     if (!this.width || !this.state) return;
     this.scene(time);
@@ -148,14 +172,16 @@ export class FarmRenderer {
       const x = sum - y;
       if (x < 0 || x >= n) continue;
       const tile = s.tiles[y*n+x], p = this.point(x+.5,y+.5);
-      const base = tile.tilled ? (tile.water ? '#99896b' : '#b39c77') : ((x+y)%2 ? '#c2ce9a' : '#cbd5a4');
+      const factory = s.scenario === 'factory';
+      const paved = factory && (x >= this.catalog.field.width || y >= this.catalog.field.height);
+      const base = paved ? ((x+y)%2 ? '#d3d5bb' : '#dcdec7') : tile.tilled ? (tile.water ? '#99896b' : '#b39c77') : ((x+y)%2 ? '#c2ce9a' : '#cbd5a4');
       this.diamond(p.x,p.y,u-1,v-1,base,tile.tilled ? '#a8906d' : '#b8c58f');
       if (tile.tilled) {
         for (let j = -.5; j <= .5; j += .5) {
           const start = this.point(x+.13,y+.5+j*.62), end = this.point(x+.83,y+.5+j*.62);
           this.line(start.x,start.y,end.x,end.y,tile.water ? '#877c61' : '#a38e6a',1.3);
         }
-      } else {
+      } else if (!paved) {
         const offset = (x * 7 + y * 11) % 3;
         this.line(p.x-5,p.y-2,p.x-7,p.y-5,'#a8bc80',1);
         this.line(p.x-4,p.y-2,p.x-3,p.y-5,'#b0c489',1);
@@ -163,9 +189,24 @@ export class FarmRenderer {
       }
       if (this.selected?.x === x && this.selected?.y === y) this.diamond(p.x,p.y,u-2,v-2,'#ffffff10','#f3f4cd');
       if (s.drone.x === x && s.drone.y === y) this.diamond(p.x,p.y,u-2,v-2,'#edf5bf25','#ecf2b5');
+      if (factory && this.catalog.obstacles.some(([ox,oy]) => ox === x && oy === y)) {
+        this.polygon([[p.x-u*.5,p.y],[p.x-u*.35,p.y-u*.6],[p.x+u*.2,p.y-u*.7],[p.x+u*.5,p.y-u*.1],[p.x+u*.1,p.y+u*.2]], '#969e88', '#828c77');
+        this.line(p.x-u*.35,p.y-u*.6,p.x+u*.05,p.y-u*.3,'#b6bca4',2);
+      }
+      if (factory) for (const [name,entity] of Object.entries(this.catalog.entities)) {
+        if(entity.x===x && entity.y===y) this.building(name,p,time);
+      }
       if (tile.crop) {
         for (const [dx,dy] of [[-.3,-.02],[.26,-.03],[0,.29]]) this.crop(p.x+dx*u,p.y+dy*v,tile);
       }
+    }
+    // Labels sit above the finished ground layer so foreground tiles cannot erase them.
+    if(s.scenario==='factory') for(const [name,entity] of Object.entries(this.catalog.entities)) {
+      const p=this.point(entity.x+.5,entity.y+.5);
+      c.font='600 '+Math.max(9,Math.min(11,u*.48))+'px ui-monospace, monospace';c.textAlign='center';
+      const width=c.measureText(name).width+12;
+      c.fillStyle='#f9f9ecee';c.fillRect(p.x-width/2,p.y+v*.7,width,16);
+      c.fillStyle='#4d6249';c.fillText(name,p.x,p.y+v*.7+11);
     }
     // Coordinate markers along the two near field edges.
     c.font = `${Math.max(9, Math.min(11, u*.35))}px ui-monospace, monospace`; c.fillStyle = '#92a177'; c.textAlign = 'center';

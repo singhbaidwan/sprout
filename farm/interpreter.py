@@ -5,7 +5,9 @@ import math
 import operator
 from dataclasses import dataclass
 
-from .engine import Farm, GameError
+from .engine import GameError
+from .world import create_game
+from .factory import Factory
 
 MAX_SOURCE = 16000
 MAX_NODES = 2500
@@ -18,7 +20,9 @@ MAX_SEQUENCE = 1000
 ACTIONS = {"move", "till", "plant", "water", "harvest", "wait"}
 QUERIES = {"can_harvest", "get_crop", "get_water", "get_x", "get_y", "get_size", "get_coins", "is_tilled"}
 BUILTINS = {"range", "len", "min", "max", "abs", "int", "str", "print"}
-RESERVED = ACTIONS | QUERIES | BUILTINS
+FACTORY_ACTIONS = {"load", "unload", "navigate_to"}
+FACTORY_QUERIES = {"cargo", "cargo_space", "stored", "free_space", "machine_status", "get_tick", "get_delivered"}
+RESERVED = ACTIONS | QUERIES | BUILTINS | FACTORY_ACTIONS | FACTORY_QUERIES
 ALLOWED = (
     ast.Module, ast.Expr, ast.Assign, ast.AugAssign, ast.If, ast.For,
     ast.While, ast.FunctionDef, ast.Return, ast.Break, ast.Continue, ast.Pass,
@@ -56,7 +60,7 @@ class Function:
 
 class Interpreter:
     def __init__(self, state=None):
-        self.farm = Farm(state)
+        self.farm = create_game(state)
         self.frames = []
         self.globals = {}
         self.scopes = [self.globals]
@@ -256,7 +260,16 @@ class Interpreter:
 
     def call(self, name, args):
         self.consume()
-        if name in ACTIONS:
+        if name in FACTORY_ACTIONS | FACTORY_QUERIES:
+            if not isinstance(self.farm, Factory):
+                raise GameError(f"{name}() belongs to the Breadworks chapter. Switch chapters to try it.")
+            if name == "navigate_to":
+                for direction in self.farm.route(*args):
+                    self.call("move", [direction])
+                return None
+            if name in FACTORY_QUERIES:
+                return self.farm.query(name, args)
+        if name in ACTIONS | FACTORY_ACTIONS:
             if self.actions >= MAX_ACTIONS:
                 raise ScriptError("Run reached 400 drone actions. Run again to continue, or use a smaller loop.", self.line)
             message = self.farm.action(name, *args)

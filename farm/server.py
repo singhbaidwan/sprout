@@ -5,16 +5,19 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from .engine import CROPS, MISSIONS, Farm, GameError, new_state, validate_state
+from .engine import CROPS, MISSIONS, GameError, new_state
 from .interpreter import run_script
 from .saves import validate_save
+from .world import create_game, validate_game
+from .factory import CATALOG, MISSIONS as FACTORY_MISSIONS, new_factory, Factory
 
 STATIC = Path(__file__).resolve().parent.parent / "static"
 EXAMPLES = STATIC.parent / "examples"
 ASSETS = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
-          "/farm.js": ("farm.js", "text/javascript"), "/style.css": ("style.css", "text/css"),
+          "/farm.js": ("farm.js", "text/javascript"), "/factory-ui.js": ("factory-ui.js", "text/javascript"), "/style.css": ("style.css", "text/css"),
           "/favicon.svg": ("favicon.svg", "image/svg+xml")}
 MAX_BODY = 100000
+MAX_SAVE_BODY = 300000
 
 
 class GameHandler(BaseHTTPRequestHandler):
@@ -53,7 +56,10 @@ class GameHandler(BaseHTTPRequestHandler):
             examples = {name: (EXAMPLES / (filename + ".py")).read_text() for name, filename in {
                 "starter": "starter", "full_field": "full_field", "smart_farmer": "smart_farmer", "carrots": "carrots"
             }.items()}
-            return self.respond(200, {"state": new_state(), "crops": CROPS, "missions": MISSIONS, "examples": examples})
+            factory_examples = {name: (EXAMPLES / f"factory_{name}.py").read_text() for name in ("starter", "harvest", "bakery", "orders")}
+            return self.respond(200, {"state": new_state(), "crops": CROPS, "missions": MISSIONS, "examples": examples,
+                                     "chapters": {"classic": {"title": "Home farm", "state": new_state(), "missions": MISSIONS, "examples": examples},
+                                                  "factory": {"title": "The Breadworks", "state": new_factory(), "missions": FACTORY_MISSIONS, "examples": factory_examples, "catalog": CATALOG}}})
         if path in ASSETS:
             filename, mime = ASSETS[path]
             return self.respond(200, (STATIC / filename).read_bytes(), mime)
@@ -65,23 +71,30 @@ class GameHandler(BaseHTTPRequestHandler):
         if self.headers.get_content_type() != "application/json":
             return self.respond(415, {"error": "Expected application/json."})
         try:
+            path = urlsplit(self.path).path
             length = int(self.headers.get("Content-Length", "0"))
-            if not 0 < length <= MAX_BODY:
-                return self.respond(413, {"error": "Request must be between 1 and 100,000 bytes."})
+            limit = MAX_SAVE_BODY if path == "/api/save/validate" else MAX_BODY
+            if not 0 < length <= limit:
+                return self.respond(413, {"error": f"Request must be between 1 and {limit:,} bytes."})
             payload = json.loads(self.rfile.read(length))
             if not isinstance(payload, dict):
                 raise GameError("Expected a JSON object.")
-            path = urlsplit(self.path).path
             if path == "/api/save/validate":
                 return self.respond(200, {"save": validate_save(payload.get("save"))})
             if path == "/api/validate":
-                return self.respond(200, {"state": validate_state(payload.get("state"))})
+                return self.respond(200, {"state": validate_game(payload.get("state"))})
             if path == "/api/run":
-                state = validate_state(payload.get("state"))
+                state = validate_game(payload.get("state"))
                 return self.respond(200, run_script(payload.get("code"), state))
             if path == "/api/unlock":
-                farm = Farm(validate_state(payload.get("state")))
+                farm = create_game(validate_game(payload.get("state")))
                 message = farm.unlock(payload.get("item"))
+                return self.respond(200, {"state": farm.snapshot(), "message": message})
+            if path == "/api/order":
+                farm = create_game(validate_game(payload.get("state")))
+                if not isinstance(farm, Factory):
+                    raise GameError("Delivery orders belong to the Breadworks chapter.")
+                message = farm.start_order()
                 return self.respond(200, {"state": farm.snapshot(), "message": message})
             return self.respond(404, {"error": "Not found."})
         except (ValueError, TypeError, UnicodeDecodeError) as exc:

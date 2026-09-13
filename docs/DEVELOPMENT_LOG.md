@@ -132,3 +132,29 @@ Requested: expand the approved farm/factory direction with more gameplay. The fi
 - Added GitHub Actions for Python 3.10–3.14 and JavaScript module syntax checks. Local validation uses Python 3.14; CI execution remains remotely observable.
 - Validation: 31 Python tests passed; JS syntax and whitespace checks passed. Browser import restored a legacy fixture with 73 coins, its program, and speed; reload retained them. An invalid version was rejected without changing the current game. The embedded browser did not expose a download event for the export action, so download completion was not verified there.
 - Next authorized milestone: a separate Breadworks chapter with cargo, storage, a mill, an oven, delivery missions, and bounded Python logistics. Continuous controllers, conveyors, and multiple drones remain later proposals.
+
+## 2026-09-13 — Breadworks production chapter
+
+### Completed work and decisions
+
+- Kept Home farm intact and added a separate saved Breadworks chapter on a fixed 8×8 map with 24 growing plots, three obstacles, and chest/mill/oven/depot pads.
+- Added typed cargo and shared chest storage; factory harvest yields items instead of coins. Transfers validate location, amounts, available stock, and capacity before any mutation.
+- Added deterministic wheat → flour → bread processing, input/output buffers, in-flight batches, three upgrades, six sequential missions, and optional repeatable delivery orders.
+- Extended the bounded interpreter with named navigation, transfer commands, inventory/capacity/status queries, and delivery/tick counters. Navigation expands into ordinary visible actions, preserving the 400-action limit and source lines.
+- Added four factory examples, a live production dashboard, canvas buildings/labels, chapter-aware guides and inspection, and independent state/program/speed persistence.
+- Preserved classic world version 1 and introduced explicitly identified factory world version 2 inside the portable envelope. Larger save validation bodies accommodate two maximum-length escaped programs; ordinary run requests keep their original limit.
+- Updated requirements, README, player guide, architecture, and roadmap to distinguish delivered behavior from future continuous controllers and logistics.
+
+### Verification
+
+- **50 tests passed** on Python 3.14: original farming/interpreter/API tests plus factory gameplay, per-frame item conservation, atomic failures, batch save/upgrade behavior, shared clock, navigation/budgets, order deadlines/retries, complete campaign, and two-chapter saves.
+- JavaScript syntax checks and `git diff --check` passed.
+- In-browser First bread completed with 127 coins, 4 delivered bread, 60 ticks, and three missions completed.
+- Bought larger cargo, ran field tending, hit the chest capacity safely, and ran an order to completion in **148 ticks**. The run finished with 25 lifetime delivered bread and a saved personal record.
+- Switching to Home farm restored its separate 73-coin test fixture and original program. Switching back kept factory state. A navigation Step applied exactly one tile at tick 560; Stop and reload retained that tick and machine progress.
+- Verified factory API guide, desktop canvas/workbench, and phone-size production/order controls. Mobile content/client widths both measured 431 CSS pixels with no horizontal overflow. No browser warning/error logs were reported in the checked session.
+- Fixed facility labels being overpainted by foreground tiles; labels now render after the ground layer. Moved current mission above the production panel for earlier visibility.
+
+### Follow-up requested during implementation
+
+The owner supplied The Farmer Was Replaced as a reference and explicitly requested optional, configurable fertilizer, irrigation, and other crop-growing automation. Reviewed the [developer's Steam description](https://store.steampowered.com/app/2060160/The_Farmer_Was_Replaced/), which describes Python-like drone programming, resource-funded technology, and continuous progression. Next authorized milestone: individually toggleable crop-care systems with automation APIs and save compatibility. These are not part of this factory commit yet.

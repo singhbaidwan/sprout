@@ -46,7 +46,7 @@ def integer(value, low, high, label):
 def validate_state(raw):
     """Rebuild, rather than trust, browser data. Unknown fields are discarded."""
     try:
-        if not isinstance(raw, dict) or raw.get("version") != 1:
+        if not isinstance(raw, dict) or type(raw.get("version")) is not int or raw["version"] != 1:
             raise GameError("This save version is not supported.")
         size = integer(raw["size"], 6, 8, "field size")
         if size not in (6, 8):
@@ -87,6 +87,8 @@ def validate_state(raw):
 
 
 class Farm:
+    missions = MISSIONS
+
     def __init__(self, state=None):
         self.state = validate_state(state) if state is not None else new_state()
         self.events = []
@@ -112,13 +114,17 @@ class Farm:
                 if tile["crop"]:
                     tile["growth"] = min(CROPS[tile["crop"]]["growth"], tile["growth"] + 1)
                 tile["water"] -= 1
-        while len(s["completed"]) < len(MISSIONS):
-            mission = MISSIONS[len(s["completed"])]
+        self.advance_systems()
+        while len(s["completed"]) < len(self.missions):
+            mission = self.missions[len(s["completed"])]
             if s["stats"][mission["stat"]] < mission["target"]:
                 break
             s["completed"].append(mission["id"])
             s["coins"] += mission["reward"]
             self.events.append(f"Mission complete: {mission['title']}! +{mission['reward']} coins")
+
+    def advance_systems(self):
+        """Scenario hook: advance other systems once, before checking missions."""
 
     def action(self, name, *args):
         s, tile = self.state, self.tile

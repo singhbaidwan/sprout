@@ -4,6 +4,7 @@ import threading
 import unittest
 
 from farm.engine import new_state
+from farm.factory import new_factory
 from farm.server import create_server
 
 
@@ -36,7 +37,9 @@ class ServerTests(unittest.TestCase):
         data = json.loads(body)
         self.assertEqual(data['state'], new_state())
         self.assertEqual(len(data['examples']), 4)
-        for asset in ['/', '/app.js', '/farm.js', '/style.css', '/favicon.svg']:
+        self.assertEqual(len(data['chapters']['factory']['missions']), 6)
+        self.assertEqual(data['chapters']['factory']['state'], new_factory())
+        for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/style.css', '/favicon.svg']:
             status, headers, body = self.request('GET', asset)
             self.assertEqual(status, 200)
             self.assertGreater(len(body), 100)
@@ -64,6 +67,31 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(json.loads(body)['save']['games']['classic']['state'], new_state())
         status, _, _ = self.request('POST', '/api/save/validate', {'save': {'version': 99}})
         self.assertEqual(status, 400)
+
+    def test_factory_run_upgrade_and_order_endpoints(self):
+        status, _, body = self.request('POST', '/api/run', {'state': new_factory(), 'code': 'harvest()'})
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['frames'][0]['state']['cargo']['wheat'], 3)
+        state = new_factory(); state['coins'] = 100; state['stats']['bread_delivered'] = 4
+        status, _, body = self.request('POST', '/api/unlock', {'state': state, 'item': 'cargo'})
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['state']['upgrades'], ['cargo'])
+        status, _, body = self.request('POST', '/api/order', {'state': state})
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['state']['order']['status'], 'active')
+        status, _, _ = self.request('POST', '/api/order', {'state': new_state()})
+        self.assertEqual(status, 400)
+
+    def test_portable_save_allows_two_maximum_length_programs(self):
+        # Escaped characters can make valid JSON much larger than source text.
+        save = {'format': 'sprout-save', 'version': 2, 'active': 'factory', 'games': {
+            'classic': {'state': new_state(), 'code': '\0' * 16000, 'speed': '2'},
+            'factory': {'state': new_factory(), 'code': '\0' * 16000, 'speed': '8'}}}
+        status, _, body = self.request('POST', '/api/save/validate', {'save': save})
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['save'], save)
+        status, _, _ = self.request('POST', '/api/save/validate', {'save': 'x' * 300000})
+        self.assertEqual(status, 413)
 
     def test_rejects_cross_origin_and_unknown_hosts(self):
         for headers in [{'Origin': 'https://example.org'}, {'Host': 'evil.example:8000'}]:

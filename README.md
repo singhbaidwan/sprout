@@ -4,7 +4,7 @@
 
 Sprout is a playable, single-player browser game with a Python simulation. Write a short program, watch your drone work, earn harvest income, and improve your routine. The project runs locally with **no third-party dependencies**.
 
-**Status:** first playable version. A proposed direction toward programmable production chains is documented in the [roadmap](docs/ROADMAP.md); factory features are not implemented yet.
+**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. The [roadmap](docs/ROADMAP.md) separates implemented factory mechanics from future conveyors, power, and multiple drones.
 
 ## Quick start
 
@@ -49,7 +49,19 @@ for plot in range(get_size()):
 
 Moving past an edge wraps around. Each successful drone action advances the farm by one tick. Watered crops grow during those ticks; simply waiting in the browser does not grow them.
 
-## What you can do today
+## Try the factory chapter
+
+Select **02 · The Breadworks** at the top of the game. Its starter program turns 8 wheat into 4 loaves, sells them at the depot, and completes the opening three missions. Each chapter keeps its own progress and program.
+
+- Harvest wheat into limited drone cargo; transfer items through a storage chest, mill, oven, and delivery depot.
+- Use `navigate_to()`, `load()`, `unload()`, inventory queries, and machine status to program logistics around obstacles.
+- Diagnose full buffers and missing ingredients in a live production dashboard. Machines keep working during every drone action.
+- Complete six factory missions, purchase three upgrades, and deliver timed orders to beat your personal record.
+- Learn with four new examples: **First bread**, **Harvest & store**, **Farm to bakery**, and **Order runner**.
+
+This chapter uses one drone and finite programs. There are no conveyors, machine placement, power grids, or continuously running controllers yet. See the [Breadworks guide](docs/PLAYER_GUIDE.md#the-breadworks--factory-chapter).
+
+## Home farm and shared features
 
 - Program a drone to move, till, plant, water, harvest, and wait.
 - Use variables, conditions, loops, functions, and state queries to automate the farm.
@@ -87,13 +99,14 @@ Run from the project root:
 python3 -m unittest discover -s tests -v
 ```
 
-The 31 current tests cover farm rules, save validation, campaign completion, upgrades, language behavior, execution limits, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
+The 50 current tests cover both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, language limits, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
 
 Optional JavaScript syntax checks, if Node.js is available (POSIX shell):
 
 ```sh
 node --input-type=module --check < static/app.js
 node --input-type=module --check < static/farm.js
+node --input-type=module --check < static/factory-ui.js
 ```
 
 There is no build step or hot reload. After changing browser files, reload the page. Restart the Python process after changing backend files.
@@ -103,6 +116,9 @@ sprout/
 ├── run.py                  # Local server entry point
 ├── farm/
 │   ├── engine.py           # State, crops, economy, missions, upgrades
+│   ├── factory.py          # Cargo, recipes, routes, delivery goals
+│   ├── world.py            # Scenario selection and validation
+│   ├── saves.py            # Portable envelopes and legacy migration
 │   ├── interpreter.py      # Bounded player-language execution
 │   └── server.py           # Static assets and JSON API
 ├── static/                 # Browser interface and canvas renderer
@@ -117,11 +133,9 @@ Completed, verified features and milestones are committed and pushed to `origin`
 
 ## Where the game could go next
 
-The proposed next chapter is a **programmable farm and factory**: harvest wheat into storage, process it into flour, bake bread, and deliver orders. Python would control production priorities and drone logistics. Later chapters could add conveyors, power, research, and cooperating drones.
+The next substantial step is a resumable interpreter with one shared simulation clock. That enables continuous controllers, then cooperating drones and conveyors. Later goals can introduce power, research, crop byproducts, and production graphs. These remain proposed work; the current Breadworks chapter establishes the inventory and processing rules they will need.
 
-Recommended order: portable saves and CI → inventory and one production chain → resumable simulation → logistics and multiple drones. Preserve the existing farm campaign while introducing these mechanics in a separate factory scenario.
-
-Read the [prioritized roadmap and factory design](docs/ROADMAP.md) for concrete code changes, example future commands, acceptance criteria, and tradeoffs.
+Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/save design.
 
 ## Documentation
 

@@ -1,9 +1,11 @@
 import { FarmRenderer } from './farm.js';
+import { describeFactoryTile, setupFactory, updateFactory, factoryGuide } from './factory-ui.js';
 
 const $ = id => document.getElementById(id);
 const STORAGE_KEY = 'sprout.save.v2';
 const editor = $('code-editor');
-let state, crops, missions, examples, initialState;
+let state, crops, missions, examples, initialState, chapters, catalog;
+const isFactory = () => state?.scenario === 'factory';
 let mode = 'loading', queue = [], queueIndex = 0, resultError = null;
 let timer = null, toastTimer = null, saveTimer = null, requestToken = 0, controller = null;
 let currentLine = null, errorLine = null, selected = null, logs = 0;
@@ -114,6 +116,8 @@ function setMode(next, label) {
   $('reset-open').disabled = $('reset-footer').disabled = $('reset-confirm').disabled = !state;
   $('export-save').disabled = !state;
   $('import-save').disabled = busy || !state;
+  document.querySelectorAll('[data-chapter]').forEach(button => { button.disabled = busy || !state; });
+  if (isFactory()) updateFactory(state, catalog, busy);
   $('runtime-status').textContent = label || ({ idle: 'Ready when you are', paused: 'Paused · step or resume', running: 'Program running', loading: 'Preparing your program', error: 'Check your program' }[mode]);
   $('runtime-dot').className = `status-dot ${mode === 'running' ? 'running' : mode === 'error' ? 'error' : ''}`;
   $('field-status').textContent = mode === 'running' ? 'Drone working' : mode === 'paused' ? 'Drone paused' : 'Drone ready';
@@ -123,15 +127,17 @@ function setMode(next, label) {
 function updateState(next, action = null) {
   state = next;
   $('coins').textContent = state.coins.toLocaleString();
-  $('harvests').textContent = state.stats.harvested.toLocaleString();
+  $('harvests').textContent = (isFactory() ? state.stats.bread_delivered : state.stats.harvested).toLocaleString();
   $('ticks').textContent = state.tick.toLocaleString();
   $('field-size').textContent = `${state.size} × ${state.size}`;
   $('drone-position').textContent = `x: ${state.drone.x}   y: ${state.drone.y}`;
   renderer.update(state, action);
   updateInspector(); updateMission(); updateUpgrades();
+  if (isFactory()) updateFactory(state, catalog, ['running', 'paused', 'loading'].includes(mode));
 }
 
-function tileDescription(tile) {
+function tileDescription(tile, x, y) {
+  if (isFactory()) { const description = describeFactoryTile(state, catalog, x, y); if (description) return description; }
   if (!tile.crop) return tile.tilled ? (tile.water ? 'Prepared soil · watered' : 'Prepared soil · ready to plant') : 'Grass · needs tilling';
   const ripe = tile.growth >= crops[tile.crop].growth;
   return `${tile.crop[0].toUpperCase() + tile.crop.slice(1)} · ${ripe ? 'ready to harvest' : `${Math.round(tile.growth / crops[tile.crop].growth * 100)}% grown · ${tile.water ? 'watered' : 'needs water'}`}`;
@@ -142,7 +148,7 @@ function updateInspector() {
   if (selected && (selected.x >= state.size || selected.y >= state.size)) selected = null;
   const { x, y } = selected || state.drone;
   $('tile-title').textContent = `Plot ${x}, ${y}${x === state.drone.x && y === state.drone.y ? ' · drone here' : ''}`;
-  $('tile-detail').textContent = tileDescription(state.tiles[y * state.size + x]);
+  $('tile-detail').textContent = tileDescription(state.tiles[y * state.size + x], x, y);
 }
 
 function updateMission() {
@@ -153,39 +159,41 @@ function updateMission() {
     'A good routine pays off. Run “Harvest & replant” to keep your farm growing.',
     'The farm is yours. Experiment with new crops, larger fields, and more efficient programs.',
   ];
-  document.querySelector('.editor-tip p').textContent = tips[Math.min(state.completed.length, 4)];
+  document.querySelector('.editor-tip p').textContent = isFactory() ? (missions[state.completed.length]?.hint || 'Campaign complete. Improve your delivery record or write your own production controller.') : tips[Math.min(state.completed.length, 4)];
   const mission = missions[state.completed.length];
   if (!mission) {
-    $('mission-number').textContent = 'ALL 4 MISSIONS COMPLETE';
-    $('mission-title').textContent = 'You grew an idea into a farm.';
+    $('mission-number').textContent = `ALL ${missions.length} MISSIONS COMPLETE`;
+    $('mission-title').textContent = isFactory() ? 'A bakery built by your code.' : 'You grew an idea into a farm.';
     $('mission-description').textContent = 'Keep experimenting. How efficient can your next harvest be?';
     $('mission-reward').textContent = 'Sandbox unlocked';
-    $('mission-progress').max = 4; $('mission-progress').value = 4; $('mission-count').textContent = '4 / 4';
+    $('mission-progress').max = missions.length; $('mission-progress').value = missions.length; $('mission-count').textContent = `${missions.length} / ${missions.length}`;
     return;
   }
   const progress = Math.min(state.stats[mission.stat], mission.target);
-  $('mission-number').textContent = `MISSION ${String(state.completed.length + 1).padStart(2, '0')} / 04`;
+  $('mission-number').textContent = `MISSION ${String(state.completed.length + 1).padStart(2, '0')} / ${String(missions.length).padStart(2, '0')}`;
   $('mission-title').textContent = mission.title; $('mission-description').textContent = mission.description;
   $('mission-reward').textContent = `+${mission.reward} coins`;
   $('mission-progress').max = mission.target; $('mission-progress').value = progress;
   $('mission-count').textContent = `${progress} / ${mission.target}`;
 }
 
-const upgradeItems = [
+const classicUpgradeItems = [
   { id: 'carrot', title: 'Carrots', detail: 'A sweeter return', cost: 40, art: '<path d="m12 10 9 7-15 10Z" fill="#d69c63"/><path d="m18 11 1-7m0 8 7-6m-7 7 9-1" stroke="#8eaa66" stroke-width="3" stroke-linecap="round"/><path d="m10 15 3 2m-5 4 2 1" stroke="#b98050" stroke-width="1.5"/>' },
   { id: 'sunflower', title: 'Sunflowers', detail: 'A brighter harvest', cost: 100, art: '<path d="M16 17v13m0-7-7-4m7 7 7-5" stroke="#91a364" stroke-width="2.5"/><path d="m16 3 3 4 5-1 0 5 5 3-4 4 1 5-6-1-4 4-3-5-5 0 1-5-4-4 5-2 1-5Z" fill="#dec579"/><circle cx="16" cy="14" r="5" fill="#9a8760"/>' },
   { id: 'expansion', title: 'More land', detail: 'Expand to 8 × 8', cost: 150, art: '<path d="m16 5 13 7-13 7L3 12Z" fill="#bbcc91"/><path d="m3 12 13 7 13-7v6l-13 8L3 18Z" fill="#a1b67e"/><path d="m10 9 13 7m-1-7-13 7" stroke="#ecf0d4"/><path d="M16 20v10m-4-5 4 5 4-5" stroke="#819661" stroke-width="2" fill="none"/>' },
 ];
 
+let upgradeItems = classicUpgradeItems;
+
 function createUpgrades() {
-  $('upgrade-list').innerHTML = upgradeItems.map(item => `<article class="upgrade-card" id="upgrade-${item.id}"><div class="upgrade-art" aria-hidden="true"><svg viewBox="0 0 32 32">${item.art}</svg></div><div><h3 class="upgrade-title">${item.title}</h3><p class="upgrade-detail">${item.detail}</p></div><button data-upgrade="${item.id}"></button></article>`).join('');
+  $('upgrade-list').innerHTML = upgradeItems.map(item => `<article class="upgrade-card" id="upgrade-${item.id}"><div class="upgrade-art" aria-hidden="true"><svg viewBox="0 0 32 32">${item.art || '<path d="M6 9h20v18H6Z" fill="#c3cda6"/><path d="m10 18 6-7 6 7m-6-7v13" stroke="#557950" stroke-width="2" fill="none"/>'}</svg></div><div><h3 class="upgrade-title">${item.title}</h3><p class="upgrade-detail">${item.detail}</p></div><button data-upgrade="${item.id}"></button></article>`).join('');
   document.querySelectorAll('[data-upgrade]').forEach(button => button.addEventListener('click', () => unlock(button.dataset.upgrade)));
 }
 
 function updateUpgrades() {
   for (const item of upgradeItems) {
     const card = $(`upgrade-${item.id}`); if (!card) continue;
-    const unlocked = item.id === 'expansion' ? state.size === 8 : state.unlocked.includes(item.id);
+    const unlocked = isFactory() ? state.upgrades.includes(item.id) : item.id === 'expansion' ? state.size === 8 : state.unlocked.includes(item.id);
     const button = card.querySelector('button');
     card.classList.toggle('unlocked', unlocked);
     button.disabled = unlocked || state.coins < item.cost || ['running', 'paused', 'loading'].includes(mode);
@@ -285,6 +293,7 @@ function openGuide(tab = 'learn') {
 
 function renderGuide(tab) {
   document.querySelectorAll('.guide-tab').forEach(button => button.classList.toggle('active', button.dataset.guide === tab));
+  if (isFactory()) { $('guide-content').innerHTML = factoryGuide(tab, catalog, missions); return; }
   const content = {
     learn: `<p>You have a small patch of land, a solar-powered drone, and a Python editor. A good routine is all your farm needs.</p><ol><li><strong>Make your first harvest.</strong> The first three plots have ripe wheat. Run the starter program to harvest them, replant the row, and earn your first mission reward.</li><li><strong>Grow a crop.</strong> Use <code>till()</code>, <code>plant("wheat")</code>, then <code>water()</code>. Crops grow when the drone takes actions. Use <code>wait()</code> if you have nothing else to do.</li><li><strong>Think in loops.</strong> Load “The whole field” to plant every plot. Load “Harvest & replant” to maintain it. Each run continues from your current farm state.</li><li><strong>Make room to grow.</strong> Spend coins on carrots, sunflowers, and more land. Complete all four missions, then experiment freely.</li></ol><h3>You're in control</h3><p><strong>Run code</strong> starts or resumes a program. <strong>Pause</strong> freezes it. <strong>Step</strong> performs one drone action. <strong>Stop</strong> discards the remaining actions and keeps the changes you have already seen. Speed changes the animation, not crop growth rules.</p><h3>A few helpful details</h3><p>The field wraps at its edges. North decreases y; east increases x. Time only passes during actions. There is no battery or water refill to manage, and wheat has a free emergency seed if you run out of coins. Your farm and editor save on this device.</p><p>Use <strong>Ctrl/Cmd + Enter</strong> to run or pause, <strong>Tab</strong> for four spaces, and <strong>Shift + Tab</strong> to unindent. Select a tile or use Inspect plots to learn what it needs.</p>`,
     api: `<p>Farm Python is a bounded subset of Python. It supports variables, math, lists, indexing, <code>if</code>, <code>for</code>, <code>while</code>, <code>def</code>, <code>return</code>, <code>break</code>, and <code>continue</code>. Imports, attributes, packages, comprehensions, and file access are unavailable.</p><h3>Drone commands · each takes one tick</h3><table><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>move("east")</code></td><td>Move one plot. Also north, south, west. Edges wrap.</td></tr><tr><td><code>till()</code></td><td>Prepare an empty plot for planting.</td></tr><tr><td><code>plant("wheat")</code></td><td>Spend coins on a seed. Also carrot or sunflower after unlocking.</td></tr><tr><td><code>water()</code></td><td>Give this plot 24 ticks of moisture, including this action's tick.</td></tr><tr><td><code>harvest()</code></td><td>Sell a ripe crop. The soil stays tilled.</td></tr><tr><td><code>wait()</code></td><td>Let one tick pass without moving.</td></tr></tbody></table><h3>Queries · no time passes</h3><p><code>can_harvest()</code> → boolean<br><code>get_crop()</code> → crop name or None<br><code>get_water()</code> → remaining moisture ticks<br><code>is_tilled()</code> → boolean<br><code>get_x()</code>, <code>get_y()</code> → drone coordinates<br><code>get_size()</code> → field width (6 or 8)<br><code>get_coins()</code> → current balance</p><h3>Python helpers</h3><p><code>range()</code>, <code>len()</code>, <code>min()</code>, <code>max()</code>, <code>abs()</code>, <code>int()</code>, <code>str()</code>, and <code>print()</code>. Functions use positional arguments. Lists are read-only; build a new list to change one.</p><pre>while not can_harvest():\n    if get_water() == 0:\n        water()\n    else:\n        wait()\nharvest()</pre><p>Each run allows up to 400 drone actions and 20,000 interpreter operations. Large or infinite programs stop with a useful error; already-played actions remain. Run another cycle to continue.</p>`,
@@ -297,7 +306,7 @@ function showPlots() {
   if (!state) return;
   const rows = state.tiles.map((tile, index) => {
     const x = index % state.size, y = Math.floor(index / state.size), here = x === state.drone.x && y === state.drone.y;
-    return `<tr class="${here ? 'current' : ''}"><td>${x}, ${y}${here ? ' · drone' : ''}</td><td>${escapeHTML(tileDescription(tile))}</td><td>${tile.water} ticks</td></tr>`;
+    return `<tr class="${here ? 'current' : ''}"><td>${x}, ${y}${here ? ' · drone' : ''}</td><td>${escapeHTML(tileDescription(tile, x, y))}</td><td>${tile.water} ticks</td></tr>`;
   });
   $('plots-table').innerHTML = `<table><thead><tr><th>Plot</th><th>Crop / soil</th><th>Moisture</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
   $('plots-dialog').showModal();
@@ -354,22 +363,24 @@ $('export-save').addEventListener('click', () => {
   const link = document.createElement('a'); link.href = url;
   link.download = `sprout-${new Date().toISOString().slice(0, 10)}.json`; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast('Save exported. Keep it somewhere safe.');
+  toast('Save download requested. Keep the JSON file somewhere safe.');
 });
 $('import-save').addEventListener('click', () => $('save-file').click());
 $('save-file').addEventListener('change', async event => {
   const file = event.target.files[0]; event.target.value = ''; pendingImport = null;
   if (!file) return;
+  const token = ++requestToken; controller = new AbortController();
   setMode('loading', 'Checking save…');
   try {
-    if (file.size > 90000) throw new Error('Save files must be under 90 KB.');
-    const result = await api('save/validate', { save: JSON.parse(await file.text()) });
+    if (file.size > 290000) throw new Error('Save files must be under 290 KB.');
+    const result = await api('save/validate', { save: JSON.parse(await file.text()) }, controller.signal);
+    if (token !== requestToken) return;
     pendingImport = result.save;
     const game = pendingImport.games[pendingImport.active];
     $('import-summary').textContent = `${Object.keys(pendingImport.games).length} chapter(s), ${game.state.coins} coins, tick ${game.state.tick}. This replaces the saved chapters on this device.`;
     $('import-dialog').showModal();
-  } catch (error) { toast(`Save not imported: ${error.message}`, true); }
-  finally { setMode('idle'); }
+  } catch (error) { if (token === requestToken) toast(`Save not imported: ${error.message}`, true); }
+  finally { if (token === requestToken) setMode('idle'); }
 });
 $('import-confirm').addEventListener('click', () => {
   if (!pendingImport) return;
@@ -378,8 +389,7 @@ $('import-confirm').addEventListener('click', () => {
   catch { toast('Could not back up your current save. Export it before importing.', true); return; }
   stop(true); saveData = pendingImport; pendingImport = null;
   const game = saveData.games[saveData.active];
-  selected = renderer.selected = null;
-  setCode(game.code); $('speed-select').value = game.speed; updateState(game.state); save();
+  activateChapter(saveData.active, game); save();
   $('import-dialog').close(); toast('Save restored.');
 });
 
@@ -388,6 +398,7 @@ $('guide-top').addEventListener('click', () => openGuide());
 $('footer-guide').addEventListener('click', () => openGuide('api'));
 $('farm-tab').addEventListener('click', () => $('farm-canvas').focus());
 $('mission-hint').addEventListener('click', () => {
+  if (isFactory()) { toast(missions[state.completed.length]?.hint || 'Start a timed order and beat your best delivery time.'); return; }
   const hints = ['Run the starter example to harvest the three ripe wheat plots.', 'Load “The whole field” to plant more rows with nested loops.', 'Unlock carrots for 40 coins, then load “A carrot patch”.', 'Run “Harvest & replant” for repeated harvest income.'];
   toast(hints[state?.completed.length] || 'Try growing sunflowers across your expanded farm.');
 });
@@ -405,10 +416,63 @@ $('reset-confirm').addEventListener('click', () => {
 document.querySelectorAll('.close-dialog').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
 document.querySelectorAll('.guide-tab').forEach(button => button.addEventListener('click', () => renderGuide(button.dataset.guide)));
 
+function activateChapter(name, game) {
+  const chapter = chapters[name];
+  saveData.active = name;
+  catalog = chapter.catalog; missions = chapter.missions; examples = chapter.examples;
+  initialState = structuredClone(chapter.state);
+  const factory = name === 'factory';
+  upgradeItems = factory ? catalog.upgrades : classicUpgradeItems;
+  renderer.catalog = catalog;
+  selected = renderer.selected = null;
+  $('production-panel').hidden = !factory;
+  if (factory) setupFactory(catalog);
+  document.body.classList.toggle('factory-mode', factory);
+  document.querySelectorAll('[data-chapter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.chapter === name)));
+  $('page-title').textContent = factory ? 'From field to factory.' : 'Your farm, on autopilot.';
+  document.querySelector('.page-heading p').textContent = factory ? 'Grow wheat. Bake bread. Write the code that connects it all.' : 'Write Python. Fly your drone. Grow something good.';
+  $('chapter-description').textContent = factory ? 'A working bakery, six missions, and delivery records to beat. Your Home farm is saved separately.' : 'A new chapter: turn wheat into bread with machines and Python logistics.';
+  $('field-title').textContent = factory ? 'The Breadworks' : 'Home field';
+  $('harvest-label').textContent = factory ? 'bread delivered' : 'harvested';
+  $('workshop-title').textContent = factory ? 'Build a better routine' : 'Room to grow';
+  document.querySelector('.workshop .section-heading span').textContent = factory ? 'More cargo. Faster batches. Fewer wasted ticks.' : 'Turn good harvests into new possibilities.';
+  $('guide-title').textContent = factory ? 'The path from grain to bread.' : 'A small guide to big harvests.';
+  document.querySelector('[data-guide="crops"]').textContent = factory ? 'Recipes & missions' : 'Crops & missions';
+  const labels = factory ? {starter: 'First bread', harvest: 'Harvest & store', bakery: 'Farm to bakery', orders: 'Order runner'} : {starter: 'Your first row', full_field: 'The whole field', smart_farmer: 'Harvest & replant', carrots: 'A carrot patch'};
+  $('example-select').innerHTML = '<option value="">Load example</option>' + Object.keys(examples).map(key => `<option value="${key}">${labels[key]}</option>`).join('');
+  createUpgrades(); setCode(game.code); $('speed-select').value = game.speed;
+  updateState(game.state);
+  $('action-status').textContent = 'Ready for your next command';
+}
+
+document.querySelectorAll('[data-chapter]').forEach(button => button.addEventListener('click', () => {
+  const name = button.dataset.chapter;
+  if (!state || !['idle', 'error'].includes(mode) || name === saveData.active) return;
+  save();
+  const chapter = chapters[name];
+  const game = saveData.games[name] || {state: structuredClone(chapter.state), code: chapter.examples.starter, speed: '2'};
+  activateChapter(name, game); setMode('idle'); save();
+  $('console').replaceChildren(); logs = 0;
+  log(`Welcome to ${chapter.title}. Progress and code are saved separately for each chapter.`, 'success');
+}));
+
+$('start-order').addEventListener('click', async () => {
+  if (!isFactory() || !['idle', 'error'].includes(mode)) return;
+  const token = ++requestToken; controller = new AbortController(); setMode('loading', 'Starting delivery order…');
+  try {
+    const result = await api('order', {state}, controller.signal);
+    if (token !== requestToken) return;
+    updateState(result.state); setMode('idle'); save(); log(result.message, 'success'); toast(result.message);
+  } catch (error) {
+    if (token !== requestToken) return;
+    setMode('error'); toast(error.message, true);
+  }
+});
+
 async function boot() {
   try {
     const data = await api('bootstrap');
-    crops = data.crops; missions = data.missions; examples = data.examples; initialState = structuredClone(data.state);
+    crops = data.crops; chapters = data.chapters; examples = chapters.classic.examples;
     let restored = data.state, code = examples.starter, restoreMessage = null;
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('sprout.save.v1') || 'null');
@@ -425,7 +489,7 @@ async function boot() {
       restoreMessage = `Could not restore saved progress: ${error.message}. A fresh farm is ready.`;
       toast(restoreMessage, true);
     }
-    createUpgrades(); setCode(code); updateState(restored); setMode('idle');
+    activateChapter(saveData.active, { state: restored, code, speed: $('speed-select').value }); setMode('idle');
     log(restoreMessage || 'Drone connected. Your first harvest is one program away.', 'success');
     log(restoreMessage ? 'Your next run continues from this field. Load an example for ideas.' : 'Tip: press Run code to try the starter program.');
     save();

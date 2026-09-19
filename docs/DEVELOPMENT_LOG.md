@@ -190,3 +190,38 @@ Reviewed the game's official Steam description. Its stated progression through p
 ### Remaining work
 
 The game still uses finite single-drone programs and fixed factory buildings. Continuous controllers, conveyors, additional industrial recipes, weather, pests, and disease modules remain future work. Crop-care options can be changed between runs; Stop first if a program is running. Remote CI status and embedded-browser download completion were not verified in this milestone; local tests and save validation were verified as above.
+
+## 2026-09-20 — continuous automation and portable checkpoints
+
+### Request and scope
+
+The owner asked to continue with the next milestone. Selected Roadmap Stage 3 after inspecting the clean published `main` branch at `5f34f0c`. This delivers continuous single-drone operation in both existing chapters. Multiple drones, conveyors, and construction remain Stage 4 proposals.
+
+### Implementation and decisions
+
+- Added `farm/continuous.py`: a compiler and resumable instruction interpreter using the existing language allowlist, game API, validation, value limits, and error model. Explicit expression values, call frames, loop records, and remaining navigation moves preserve exact program position after an action.
+- Added one-action `POST /api/controller/step`. The existing `Farm.action()` clock advances crops, care systems, machines, and order deadlines once. Computation does not tick. Each request has fresh 20,000-operation and 100-output budgets; bounded runs retain their original 400-action cap.
+- Added typed version 1 checkpoints, bounded to 48 KB, with 24 user-call depth, 2,500 value/object bounds, and 256 loop records. Bounded references preserve aliases without allowing cyclic/forward references. Source and world digests reject mismatched pairs. Bytecode is always regenerated from validated source.
+- Kept the server stateless. Identical retries are deterministic; no farm changes happen in a hidden server session. Browser request tokens and expected revisions prevent late responses from overwriting paused/stopped/reset state. Multi-tab storage remains last-write-wins.
+- Added a per-chapter Run mode selector, continuous Run/Pause/Resume/Step/Stop behavior, one outstanding request at a time, and atomic world/checkpoint saves. Pause/Stop discard in-flight unacknowledged results. Stop clears the controller while retaining farm progress; edit/settings/workshop/chapter controls stay locked while it is active.
+- Extended the version 2 save envelope with optional execution mode and checkpoint fields. Existing saves default to bounded mode. Reloads/imports restore controllers paused, including nested functions and routes. Checkpoints need no process-local session or key, so server restarts and cross-device saves work.
+- Increased save/controller request limits to 600,000 bytes and file imports to 590 KB; export uses compact JSON. Other API request limits remain 100,000 bytes.
+- Added Continuous autopilot examples for Home farm and Breadworks, including all optional growing systems. A loop sustains farming, supply maintenance, production, and delivery. Loading the example automatically selects Continuous mode.
+- Added the in-game Continuous guide and `docs/CONTINUOUS.md`; updated requirements, architecture, README, player guide, and roadmap with implemented behavior and remaining multi-controller work.
+
+### Verification
+
+- **81 Python tests passed** locally on Python 3.14, including real loopback HTTP tests. The initial sandboxed baseline could not open sockets; the full suite was then run with the loopback permission required by the project agreements.
+- Tests cover more than 400 actions, exact per-step tick counts, deterministic retries, parity with finite scripts, nested calls/loop control/expressions, alias preservation, partially completed routes, print/operation/recursion/memory limits, completed-world retention on errors, malformed checkpoints, source/world binding, save migration, and HTTP behavior.
+- Both continuous examples ran for 650 actions in each of all eight growing-option combinations: 10,400 checkpointed actions across 16 scenarios. Farming continues and Breadworks delivers bread in every case.
+- JavaScript module syntax and whitespace checks passed.
+- Browser QA used the isolated `127.0.0.1:8001` test save. A bakery checkpoint at tick 564 reloaded paused mid-route; Step moved exactly one tile to tick 565. Continuous production increased deliveries from 25 to 45. Pause held tick 803, Step advanced to 804, and Stop unlocked editing while keeping that state.
+- A computation-only infinite loop reported the operation limit without advancing tick 804. Loading a valid controller recovered; reload restored its tick-805 checkpoint paused.
+- Imported a separately generated nested-function fixture at tick 1/x=1. Restore showed a paused controller; Step executed its saved next `wait()` at tick 2/x=1, proving the function did not restart.
+- Reviewed the in-game guide and controls on the default 431px viewport (no horizontal overflow) and at a desktop viewport (1425px content/client width). Restored the temporary viewport override. No browser warning/error logs were observed in the checked session.
+
+### Remaining work
+
+Stage 4 can add placeable machines and bounded conveyors, then cooperative drones with reservations and conflict resolution. Today's scheduler is single-drone; it must not simply advance the whole world once per new drone. Full snapshots remain appropriate for the small map. There is no offline execution, shared server session, public hosting, or unrestricted Python. Remote CI execution and embedded-browser file-download completion are separate from the verified local suite and import flow.
+
+This milestone is committed and pushed as one coherent change under the owner's standing Git preference; the final task response records the verified published commit.

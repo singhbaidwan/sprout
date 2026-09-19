@@ -59,7 +59,7 @@ Select **02 · The Breadworks** at the top of the game. Its starter program turn
 - Complete six factory missions, purchase three upgrades, and deliver timed orders to beat your personal record.
 - Learn with four new examples: **First bread**, **Harvest & store**, **Farm to bakery**, and **Order runner**.
 
-This chapter uses one drone and finite programs. There are no conveyors, machine placement, power grids, or continuously running controllers yet. See the [Breadworks guide](docs/PLAYER_GUIDE.md#the-breadworks--factory-chapter).
+This chapter uses one drone with bounded or continuous programs. Conveyors, machine placement, and power grids remain future work. See the [Breadworks guide](docs/PLAYER_GUIDE.md#the-breadworks--factory-chapter).
 
 ## Customize crop growing
 
@@ -70,6 +70,12 @@ Open **Growing options** and independently enable:
 - **Soil health:** track nutrients, collect crop residue, and restore depleted ground with compost.
 
 Use **Smart crop care** or **Sprinkler network** from the example menu. There are three additional growing goals per chapter. Options default off and can be changed between runs; switching them off keeps equipment, supplies, and progress. See the [crop-care rules and Python API](docs/CROP_CARE.md).
+
+## Keep the farm running
+
+Load **Continuous autopilot** in either chapter, then press **Run code**. It tends crops and, in Breadworks, keeps the bakery supplied and delivers bread. It also handles the growing options you enable.
+
+Continuous mode supports long-running loops, **Pause**, one-action **Step**, and **Stop**. It saves variables and program position with the farm after every action. Reloads restore paused; **Resume** picks up where you left off. Stop first to edit code or change options. There is no offline growth. See the [continuous automation guide](docs/CONTINUOUS.md).
 
 ## Home farm and shared features
 
@@ -89,13 +95,13 @@ Use **Smart crop care** or **Sprinkler network** from the example menu. There ar
 
 Both the simulation and script interpreter are written in Python. Player programs use a **deliberately limited Python subset**, evaluated by an allowlisted AST interpreter. They are not arbitrary Python programs: imports, packages, attributes, file/network access, and several advanced language features are unavailable.
 
-Each run allows up to **400 drone actions** and **20,000 interpreter operations**. Infinite loops, excessive output, and oversized values stop with an error. See the [full language and command reference](docs/PLAYER_GUIDE.md).
+**Bounded run** allows up to **400 drone actions** and **20,000 interpreter operations**. **Continuous** executes one action per request with a fresh 20,000-operation quota and a bounded portable checkpoint. Computation-only infinite loops, excessive output, and oversized values stop with an error. See the [full language and command reference](docs/PLAYER_GUIDE.md).
 
-The server simulates a bounded run and returns action frames; the browser plays them back. Pause freezes playback, and Stop keeps only the actions already displayed. Variables reset on the next run, while farm progress persists.
+In Bounded run, the server simulates a bounded run and returns action frames; the browser plays them back. Pause freezes playback, and Stop keeps only the actions already displayed. Variables reset on the next run, while farm progress persists.
 
 ## Saves and local hosting
 
-Progress lives in browser storage on this device. Refreshing restores played actions and editor text, but does not resume queued actions. Reset requires an in-game confirmation.
+Progress lives in browser storage on this device. Refreshing restores displayed actions and editor text. Continuous controllers restore paused with their variables and program position; bounded playback queues are discarded. Reset requires an in-game confirmation.
 
 Use the same URL consistently: `localhost`, `127.0.0.1`, and different ports have separate saves. Use **Export save** for a portable JSON copy and **Import save** to restore it. Imports are validated before confirmation and retain a device-local backup. Original version 1 saves migrate automatically. Browser data removal can erase progress. There are no accounts or cloud backups yet.
 
@@ -109,7 +115,7 @@ Run from the project root:
 python3 -m unittest discover -s tests -v
 ```
 
-The 69 current tests cover both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
+The 81 current tests cover both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
 
 Optional JavaScript syntax checks, if Node.js is available (POSIX shell):
 
@@ -132,6 +138,7 @@ sprout/
 │   ├── world.py            # Scenario selection and validation
 │   ├── saves.py            # Portable envelopes and legacy migration
 │   ├── interpreter.py      # Bounded player-language execution
+│   ├── continuous.py       # Resumable interpreter and portable checkpoints
 │   └── server.py           # Static assets and JSON API
 ├── static/                 # Browser interface and canvas renderer
 ├── examples/               # Runnable programs shared with the UI
@@ -145,7 +152,7 @@ Completed, verified features and milestones are committed and pushed to `origin`
 
 ## Where the game could go next
 
-The next substantial step is a resumable interpreter with one shared simulation clock. That enables continuous controllers, then cooperating drones and conveyors. Later goals can introduce power, research, crop byproducts, and production graphs. These remain proposed work; the current Breadworks chapter establishes the inventory and processing rules they will need.
+The next substantial step is logistics and building: placeable machines, limited-capacity conveyors, and eventually cooperating drones. Continuous execution and portable checkpoints now provide the single-drone foundation. Later goals can introduce power, research, crop byproducts, and production graphs. These remain proposed work; the current Breadworks chapter establishes the inventory and processing rules they will need.
 
 Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/save design.
 
@@ -155,6 +162,7 @@ Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/s
 | --- | --- |
 | [Requirements](docs/REQUIREMENTS.md) | Scope, game rules, and acceptance criteria |
 | [Player guide](docs/PLAYER_GUIDE.md) | Controls, examples, command API, and troubleshooting |
+| [Continuous automation](docs/CONTINUOUS.md) | Long-running programs, checkpoints, limits, and recovery |
 | [Crop care](docs/CROP_CARE.md) | Configurable systems, supplies, equipment, and automation API |
 | [Architecture](docs/ARCHITECTURE.md) | Modules, state, execution, storage, and limits |
 | [Roadmap](docs/ROADMAP.md) | Suggested improvements and programmable factory concept |

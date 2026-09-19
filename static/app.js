@@ -7,6 +7,8 @@ const STORAGE_KEY = 'sprout.save.v2';
 const editor = $('code-editor');
 let state, crops, missions, examples, initialState, chapters, catalog, careRules;
 const isFactory = () => state?.scenario === 'factory';
+let checkpoint = null, stepping = false;
+const continuous = () => $('execution-select').value === 'continuous';
 let mode = 'loading', queue = [], queueIndex = 0, resultError = null;
 let timer = null, toastTimer = null, saveTimer = null, requestToken = 0, controller = null;
 let currentLine = null, errorLine = null, selected = null, logs = 0;
@@ -50,7 +52,7 @@ function log(message, kind = 'info', line = null) {
 
 function save() {
   if (!state) return;
-  saveData.games[saveData.active] = { state, code: editor.value, speed: $('speed-select').value };
+  saveData.games[saveData.active] = { state, code: editor.value, speed: $('speed-select').value, execution: $('execution-select').value, ...(checkpoint ? { checkpoint } : {}) };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
     $('save-status').textContent = 'Saved on this device';
@@ -109,10 +111,12 @@ function setMode(next, label) {
   const busy = ['running', 'paused', 'loading'].includes(mode);
   editor.readOnly = busy;
   $('example-select').disabled = busy;
+  $('execution-select').disabled = busy;
+  $('execution-help').textContent = continuous() ? 'Keeps its place between actions. Reload restores it paused. Stop lets you edit.' : 'Runs up to 400 actions. Choose Continuous for long-running loops.';
   $('run-button').disabled = mode === 'loading' || !state;
   $('run-label').textContent = mode === 'running' ? 'Pause' : mode === 'paused' ? 'Resume' : mode === 'loading' ? 'Preparing…' : 'Run code';
   $('run-symbol').textContent = mode === 'running' ? 'Ⅱ' : '▶';
-  $('step-button').disabled = mode === 'running' || mode === 'loading' || !state;
+  $('step-button').disabled = stepping || mode === 'running' || mode === 'loading' || !state;
   $('stop-button').disabled = !busy || !state;
   $('reset-open').disabled = $('reset-footer').disabled = $('reset-confirm').disabled = !state;
   $('export-save').disabled = !state;
@@ -224,6 +228,12 @@ async function unlock(item) {
 
 async function prepare(singleStep = false) {
   if (!state || mode === 'loading') return;
+  if (continuous()) {
+    checkpoint = null; currentLine = errorLine = null; updateLines();
+    setMode(singleStep ? 'paused' : 'running');
+    log('Continuous controller started. Each completed action is saved.');
+    continuousStep(); return;
+  }
   const token = ++requestToken;
   controller = new AbortController();
   currentLine = errorLine = null; updateLines();
@@ -265,6 +275,7 @@ function finish() {
 }
 
 function advanceOne() {
+  if (continuous()) { continuousStep(); return; }
   while (queueIndex < queue.length) {
     const frame = queue[queueIndex++]; applyFrame(frame);
     if (frame.state) break;
@@ -278,14 +289,43 @@ function advanceOne() {
 
 function play() {
   if (mode !== 'running') return;
+  if (continuous()) { continuousStep(); return; }
   advanceOne();
   if (mode === 'running') timer = setTimeout(play, 560 / Number($('speed-select').value));
+}
+
+async function continuousStep() {
+  if (stepping || !['running', 'paused'].includes(mode)) return;
+  const token = ++requestToken;
+  const expectedRevision = (checkpoint?.revision || 0) + 1;
+  controller = new AbortController(); stepping = true; setMode(mode);
+  try {
+    const result = await api('controller/step', { state, code: editor.value, checkpoint }, controller.signal);
+    if (token !== requestToken) return;
+    if (result.revision !== expectedRevision) throw new Error('Controller update arrived out of order. Stop to restart it.');
+    // Commit world and continuation together before any save or next request.
+    checkpoint = result.checkpoint;
+    for (const frame of result.frames) applyFrame(frame);
+    if (result.done) { resultError = result.error; finish(); }
+    else { save(); setMode(mode, `${mode === 'paused' ? 'Paused' : 'Continuous'} · tick ${state.tick}`); }
+  } catch (error) {
+    if (token !== requestToken) return;
+    setMode('paused', error.status === 400 ? 'Controller cannot resume · Stop to restart' : 'Connection interrupted · retry Resume or Stop');
+    log(error.message, 'error'); toast(error.message, true);
+  } finally {
+    if (token === requestToken) {
+      stepping = false;
+      $('step-button').disabled = mode === 'running' || mode === 'loading';
+      if (mode === 'running') timer = setTimeout(play, 560 / Number($('speed-select').value));
+    }
+  }
 }
 
 function stop(silent = false) {
   ++requestToken; controller?.abort();
   clearTimeout(timer); timer = null;
   queue = []; queueIndex = 0; resultError = null; currentLine = null;
+  checkpoint = null; stepping = false;
   setMode('idle', 'Stopped · farm progress kept'); updateLines(); save();
   if (!silent) log('Stopped. Only completed actions have been kept.');
 }
@@ -297,11 +337,12 @@ function openGuide(tab = 'learn') {
 
 function renderGuide(tab) {
   document.querySelectorAll('.guide-tab').forEach(button => button.classList.toggle('active', button.dataset.guide === tab));
+  if (tab === 'automation') { $('guide-content').innerHTML = `<h3>A factory that keeps running</h3><p>Choose <strong>Continuous</strong> above the editor or load <strong>Continuous autopilot</strong>. Your script can use <code>while True:</code> to tend crops and keep machines supplied. A finite script still finishes normally.</p><pre>while True:\n    if can_harvest():\n        harvest()\n    else:\n        wait()</pre><p><strong>Pause</strong> freezes the farm at the last displayed action. <strong>Step</strong> completes at most one action, including one tile of a route. <strong>Resume</strong> continues from the saved variables and function calls. <strong>Stop</strong> keeps farm progress and clears the controller so you can edit, switch chapters, or change growing options.</p><p>World and program position save together after each action. Reloads and imported saves restore paused; nothing runs while the page is closed. Speed changes real-world pacing only. Crops, irrigation, machines, and delivery deadlines share one action clock.</p><p>Continuous mode allows 20,000 interpreter operations and 100 printed messages between actions, with 48 KB of controller memory. An infinite loop must perform an action such as <code>wait()</code>. Bounded run retains its 400-action limit. Imports, attributes, files, and unrestricted Python remain unavailable.</p>`; return; }
   if (tab === 'care') { $('guide-content').innerHTML = cultivationGuide(); return; }
   if (isFactory()) { $('guide-content').innerHTML = factoryGuide(tab, catalog, missions); return; }
   const content = {
-    learn: `<p>You have a small patch of land, a solar-powered drone, and a Python editor. A good routine is all your farm needs.</p><ol><li><strong>Make your first harvest.</strong> The first three plots have ripe wheat. Run the starter program to harvest them, replant the row, and earn your first mission reward.</li><li><strong>Grow a crop.</strong> Use <code>till()</code>, <code>plant("wheat")</code>, then <code>water()</code>. Crops grow when the drone takes actions. Use <code>wait()</code> if you have nothing else to do.</li><li><strong>Think in loops.</strong> Load “The whole field” to plant every plot. Load “Harvest & replant” to maintain it. Each run continues from your current farm state.</li><li><strong>Make room to grow.</strong> Spend coins on carrots, sunflowers, and more land. Complete all four missions, then experiment freely.</li></ol><h3>You're in control</h3><p><strong>Run code</strong> starts or resumes a program. <strong>Pause</strong> freezes it. <strong>Step</strong> performs one drone action. <strong>Stop</strong> discards the remaining actions and keeps the changes you have already seen. Speed changes the animation, not crop growth rules.</p><h3>A few helpful details</h3><p>The field wraps at its edges. North decreases y; east increases x. Time only passes during actions. There is no battery or water refill to manage, and wheat has a free emergency seed if you run out of coins. Your farm and editor save on this device.</p><p>Use <strong>Ctrl/Cmd + Enter</strong> to run or pause, <strong>Tab</strong> for four spaces, and <strong>Shift + Tab</strong> to unindent. Select a tile or use Inspect plots to learn what it needs.</p>`,
-    api: `<p>Farm Python is a bounded subset of Python. It supports variables, math, lists, indexing, <code>if</code>, <code>for</code>, <code>while</code>, <code>def</code>, <code>return</code>, <code>break</code>, and <code>continue</code>. Imports, attributes, packages, comprehensions, and file access are unavailable.</p><h3>Drone commands · each takes one tick</h3><table><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>move("east")</code></td><td>Move one plot. Also north, south, west. Edges wrap.</td></tr><tr><td><code>till()</code></td><td>Prepare an empty plot for planting.</td></tr><tr><td><code>plant("wheat")</code></td><td>Spend coins on a seed. Also carrot or sunflower after unlocking.</td></tr><tr><td><code>water()</code></td><td>Give this plot 24 ticks of moisture, including this action's tick.</td></tr><tr><td><code>harvest()</code></td><td>Sell a ripe crop. The soil stays tilled.</td></tr><tr><td><code>wait()</code></td><td>Let one tick pass without moving.</td></tr></tbody></table><h3>Queries · no time passes</h3><p><code>can_harvest()</code> → boolean<br><code>get_crop()</code> → crop name or None<br><code>get_water()</code> → remaining moisture ticks<br><code>is_tilled()</code> → boolean<br><code>get_x()</code>, <code>get_y()</code> → drone coordinates<br><code>get_size()</code> → field width (6 or 8)<br><code>get_coins()</code> → current balance</p><h3>Python helpers</h3><p><code>range()</code>, <code>len()</code>, <code>min()</code>, <code>max()</code>, <code>abs()</code>, <code>int()</code>, <code>str()</code>, and <code>print()</code>. Functions use positional arguments. Lists are read-only; build a new list to change one.</p><pre>while not can_harvest():\n    if get_water() == 0:\n        water()\n    else:\n        wait()\nharvest()</pre><p>Each run allows up to 400 drone actions and 20,000 interpreter operations. Large or infinite programs stop with a useful error; already-played actions remain. Run another cycle to continue.</p>`,
+    learn: `<p>You have a small patch of land, a solar-powered drone, and a Python editor. A good routine is all your farm needs.</p><ol><li><strong>Make your first harvest.</strong> The first three plots have ripe wheat. Run the starter program to harvest them, replant the row, and earn your first mission reward.</li><li><strong>Grow a crop.</strong> Use <code>till()</code>, <code>plant("wheat")</code>, then <code>water()</code>. Crops grow when the drone takes actions. Use <code>wait()</code> if you have nothing else to do.</li><li><strong>Think in loops.</strong> Load “The whole field” to plant every plot. Load “Harvest & replant” to maintain it. Each run continues from your current farm state.</li><li><strong>Make room to grow.</strong> Spend coins on carrots, sunflowers, and more land. Complete all four missions, then experiment freely.</li></ol><h3>You're in control</h3><p><strong>Run code</strong> starts or resumes a program. <strong>Pause</strong> freezes it. <strong>Step</strong> performs one drone action. <strong>Stop</strong> discards the remaining actions and keeps the changes you have already seen. Speed changes the animation, not crop growth rules.</p><h3>A few helpful details</h3><p>The field wraps at its edges. North decreases y; east increases x. Time only passes during actions. There is no battery to manage. Water refills are needed only with Irrigation enabled, and wheat has a free emergency seed if you run out of coins. Your farm and editor save on this device.</p><p>Use <strong>Ctrl/Cmd + Enter</strong> to run or pause, <strong>Tab</strong> for four spaces, and <strong>Shift + Tab</strong> to unindent. Select a tile or use Inspect plots to learn what it needs.</p>`,
+    api: `<p>Farm Python is a bounded subset of Python. It supports variables, math, lists, indexing, <code>if</code>, <code>for</code>, <code>while</code>, <code>def</code>, <code>return</code>, <code>break</code>, and <code>continue</code>. Imports, attributes, packages, comprehensions, and file access are unavailable.</p><h3>Drone commands · each takes one tick</h3><table><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>move("east")</code></td><td>Move one plot. Also north, south, west. Edges wrap.</td></tr><tr><td><code>till()</code></td><td>Prepare an empty plot for planting.</td></tr><tr><td><code>plant("wheat")</code></td><td>Spend coins on a seed. Also carrot or sunflower after unlocking.</td></tr><tr><td><code>water()</code></td><td>Give this plot 24 ticks of moisture, including this action's tick.</td></tr><tr><td><code>harvest()</code></td><td>Sell a ripe crop. The soil stays tilled.</td></tr><tr><td><code>wait()</code></td><td>Let one tick pass without moving.</td></tr></tbody></table><h3>Queries · no time passes</h3><p><code>can_harvest()</code> → boolean<br><code>get_crop()</code> → crop name or None<br><code>get_water()</code> → remaining moisture ticks<br><code>is_tilled()</code> → boolean<br><code>get_x()</code>, <code>get_y()</code> → drone coordinates<br><code>get_size()</code> → field width (6 or 8)<br><code>get_coins()</code> → current balance</p><h3>Python helpers</h3><p><code>range()</code>, <code>len()</code>, <code>min()</code>, <code>max()</code>, <code>abs()</code>, <code>int()</code>, <code>str()</code>, and <code>print()</code>. Functions use positional arguments. Lists are read-only; build a new list to change one.</p><pre>while not can_harvest():\n    if get_water() == 0:\n        water()\n    else:\n        wait()\nharvest()</pre><p>Bounded run allows up to 400 drone actions and 20,000 interpreter operations. Choose Continuous for ongoing automation; see the Continuous guide tab. Programs exceeding their work budget stop with a useful error; already-played actions remain.</p>`,
     crops: `<p>Plant seeds with your harvest income. Watered crops grow one stage per drone action. Mature crops stay ready indefinitely.</p><table><thead><tr><th>Crop</th><th>Seed</th><th>Sale</th><th>Growth</th><th>Unlock</th></tr></thead><tbody>${Object.entries(crops || {}).map(([name, crop]) => `<tr><td>${escapeHTML(name)}</td><td>${crop.seed}</td><td>${crop.sale}</td><td>${crop.growth} ticks</td><td>${crop.unlock || 'Free'}</td></tr>`).join('')}</tbody></table><h3>Four milestones</h3><ol>${(missions || []).map(mission => `<li><strong>${escapeHTML(mission.title)}</strong><br>${escapeHTML(mission.description)} Reward: ${mission.reward} coins.</li>`).join('')}</ol><p>Mission rewards arrive automatically, in order. Lifetime crop sales count toward the final mission; mission rewards do not. More land costs 150 coins and expands your farm to 8 × 8 without removing crops.</p><h3>Your next challenge</h3><p>Finish the missions, unlock every crop, and expand the field. Then try earning more coins with fewer drone actions. The game remains open for experimentation.</p>`,
   };
   $('guide-content').innerHTML = content[tab] || content.learn;
@@ -318,7 +359,11 @@ function showPlots() {
 }
 
 function runOrPause() {
-  if (mode === 'running') { clearTimeout(timer); setMode('paused'); }
+  if (mode === 'running') {
+    clearTimeout(timer);
+    if (continuous()) { ++requestToken; controller?.abort(); stepping = false; }
+    setMode('paused'); save();
+  }
   else if (mode === 'paused') { setMode('running'); play(); }
   else if (mode !== 'loading') prepare();
 }
@@ -327,10 +372,11 @@ $('run-button').addEventListener('click', runOrPause);
 $('step-button').addEventListener('click', () => mode === 'paused' ? advanceOne() : prepare(true));
 $('stop-button').addEventListener('click', () => stop());
 $('speed-select').addEventListener('change', save);
+$('execution-select').addEventListener('change', () => { setMode('idle'); save(); });
 $('clear-log').addEventListener('click', () => { $('console').replaceChildren(); logs = 0; $('log-count').textContent = '0'; });
 $('example-select').addEventListener('change', event => {
   const value = event.target.value;
-  if (examples?.[value]) { setCode(examples[value]); setMode('idle'); save(); log('Example loaded. It will run from your current farm state.'); toast('Example loaded. Make it your own.'); }
+  if (examples?.[value]) { if (value === 'continuous') $('execution-select').value = 'continuous'; setCode(examples[value]); setMode('idle'); save(); log('Example loaded. It will run from your current farm state.'); toast('Example loaded. Make it your own.'); }
   event.target.value = '';
 });
 
@@ -364,7 +410,7 @@ window.addEventListener('pagehide', save);
 
 $('export-save').addEventListener('click', () => {
   save();
-  const url = URL.createObjectURL(new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' }));
+  const url = URL.createObjectURL(new Blob([JSON.stringify(saveData)], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url;
   link.download = `sprout-${new Date().toISOString().slice(0, 10)}.json`; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -377,7 +423,7 @@ $('save-file').addEventListener('change', async event => {
   const token = ++requestToken; controller = new AbortController();
   setMode('loading', 'Checking save…');
   try {
-    if (file.size > 290000) throw new Error('Save files must be under 290 KB.');
+    if (file.size > 590000) throw new Error('Save files must be under 590 KB.');
     const result = await api('save/validate', { save: JSON.parse(await file.text()) }, controller.signal);
     if (token !== requestToken) return;
     pendingImport = result.save;
@@ -412,6 +458,7 @@ $('reset-open').addEventListener('click', () => $('reset-dialog').showModal());
 $('reset-footer').addEventListener('click', () => $('reset-dialog').showModal());
 $('reset-confirm').addEventListener('click', () => {
   stop(true); selected = null; renderer.selected = null;
+  $('execution-select').value = 'finite';
   updateState(structuredClone(initialState)); setCode(examples.starter); setMode('idle');
   $('action-status').textContent = 'Ready for your first command';
   $('console').replaceChildren(); logs = 0;
@@ -444,11 +491,15 @@ function activateChapter(name, game) {
   $('guide-title').textContent = factory ? 'The path from grain to bread.' : 'A small guide to big harvests.';
   document.querySelector('[data-guide="crops"]').textContent = factory ? 'Recipes & missions' : 'Crops & missions';
   const labels = factory ? {starter: 'First bread', harvest: 'Harvest & store', bakery: 'Farm to bakery', orders: 'Order runner'} : {starter: 'Your first row', full_field: 'The whole field', smart_farmer: 'Harvest & replant', carrots: 'A carrot patch'};
-  Object.assign(labels, {crop_care: 'Smart crop care', irrigation: 'Sprinkler network'});
+  Object.assign(labels, {continuous: 'Continuous autopilot', crop_care: 'Smart crop care', irrigation: 'Sprinkler network'});
   $('example-select').innerHTML = '<option value="">Load example</option>' + Object.keys(examples).map(key => `<option value="${key}">${labels[key]}</option>`).join('');
   createUpgrades(); setCode(game.code); $('speed-select').value = game.speed;
+  checkpoint = game.checkpoint || null;
+  $('execution-select').value = game.execution || 'finite';
   updateState(game.state);
-  $('action-status').textContent = 'Ready for your next command';
+  $('action-status').textContent = checkpoint ? 'Saved controller · ready to resume' : 'Ready for your next command';
+  currentLine = checkpoint?.line || null; updateLines();
+  setMode(checkpoint ? 'paused' : 'idle', checkpoint ? 'Checkpoint restored · Resume or Step' : undefined);
 }
 
 document.querySelectorAll('[data-chapter]').forEach(button => button.addEventListener('click', () => {
@@ -457,7 +508,7 @@ document.querySelectorAll('[data-chapter]').forEach(button => button.addEventLis
   save();
   const chapter = chapters[name];
   const game = saveData.games[name] || {state: structuredClone(chapter.state), code: chapter.examples.starter, speed: '2'};
-  activateChapter(name, game); setMode('idle'); save();
+  activateChapter(name, game); save();
   $('console').replaceChildren(); logs = 0;
   log(`Welcome to ${chapter.title}. Progress and code are saved separately for each chapter.`, 'success');
 }));
@@ -510,7 +561,7 @@ async function boot() {
       restoreMessage = `Could not restore saved progress: ${error.message}. A fresh farm is ready.`;
       toast(restoreMessage, true);
     }
-    activateChapter(saveData.active, { state: restored, code, speed: $('speed-select').value }); setMode('idle');
+    activateChapter(saveData.active, { ...saveData.games[saveData.active], state: restored, code, speed: $('speed-select').value });
     log(restoreMessage || 'Drone connected. Your first harvest is one program away.', 'success');
     log(restoreMessage ? 'Your next run continues from this field. Load an example for ideas.' : 'Tip: press Run code to try the starter program.');
     save();

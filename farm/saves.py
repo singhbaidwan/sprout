@@ -2,6 +2,7 @@
 
 from .engine import GameError
 from .world import validate_game
+from .continuous import validate_checkpoint
 
 
 def validate_save(raw):
@@ -30,4 +31,13 @@ def validate_save(raw):
         if state.get("scenario", "classic") != name:
             raise GameError("The saved world does not match its chapter.")
         clean["games"][name] = {"state": state, "code": code, "speed": speed}
+        execution = game.get("execution", "finite")
+        if type(execution) is not str or execution not in ("finite", "continuous"):
+            raise GameError("Invalid controller mode in this save.")
+        if "execution" in game:
+            clean["games"][name]["execution"] = execution
+        if game.get("checkpoint") is not None:
+            if execution != "continuous":
+                raise GameError("A checkpoint requires continuous mode.")
+            clean["games"][name]["checkpoint"] = validate_checkpoint(code, state, game["checkpoint"])
     return clean

@@ -36,7 +36,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         data = json.loads(body)
         self.assertEqual(data['state'], new_state())
-        self.assertEqual(len(data['examples']), 6)
+        self.assertEqual(len(data['examples']), 7)
         self.assertEqual(len(data['chapters']['factory']['missions']), 6)
         self.assertEqual(data['chapters']['factory']['state'], new_factory())
         for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/cultivation-ui.js', '/style.css', '/favicon.svg']:
@@ -53,6 +53,34 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(result['frames'][0]['state']['coins'], 25)
         status, _, _ = self.request('POST', '/api/validate', {'state': {'invalid': True}})
         self.assertEqual(status, 400)
+
+    def test_controller_steps_resume_validate_and_fail_safely(self):
+        code = 'while True:\n    wait()'
+        payload = {'state': new_factory(), 'code': code}
+        status, _, body = self.request('POST', '/api/controller/step', payload)
+        self.assertEqual(status, 200)
+        first = json.loads(body)
+        self.assertEqual(first['state']['tick'], 1)
+        self.assertEqual(first['revision'], 1)
+        payload.update(state=first['state'], checkpoint=first['checkpoint'])
+        status, _, body = self.request('POST', '/api/controller/step', payload)
+        self.assertEqual(status, 200)
+        second = json.loads(body)
+        self.assertEqual(second['state']['tick'], 2)
+        self.assertEqual(second['revision'], 2)
+        # Repeating an unacknowledged stateless request cannot duplicate progress.
+        _, _, body = self.request('POST', '/api/controller/step', payload)
+        self.assertEqual(json.loads(body), second)
+        payload['state']['coins'] += 1
+        status, _, _ = self.request('POST', '/api/controller/step', payload)
+        self.assertEqual(status, 400)
+        status, _, body = self.request('POST', '/api/controller/step', {'state': new_state(), 'code': 'while True: pass'})
+        self.assertEqual(status, 200)
+        self.assertTrue(json.loads(body)['done'])
+        self.assertEqual(json.loads(body)['state']['tick'], 0)
+        for cp in (False, [], {}, {'version': True}):
+            status, _, _ = self.request('POST', '/api/controller/step', {'state': new_state(), 'code': code, 'checkpoint': cp})
+            self.assertEqual(status, 400)
 
     def test_unlock_endpoint(self):
         state = new_state(); state['coins'] = 80
@@ -102,7 +130,7 @@ class ServerTests(unittest.TestCase):
         status, _, body = self.request('POST', '/api/save/validate', {'save': save})
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)['save'], save)
-        status, _, _ = self.request('POST', '/api/save/validate', {'save': 'x' * 300000})
+        status, _, _ = self.request('POST', '/api/save/validate', {'save': 'x' * 600000})
         self.assertEqual(status, 413)
 
     def test_rejects_cross_origin_and_unknown_hosts(self):

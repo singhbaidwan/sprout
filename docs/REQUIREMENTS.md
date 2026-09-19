@@ -80,7 +80,7 @@ Upgrades: cargo 8→16 for 50 coins, mill 4→2 ticks for 75, oven 6→3 ticks f
 
 Optional orders unlock at 4 lifetime delivered bread: deliver 12 more within 180 action ticks for 40 coins. Stockpiles count; a delivery on the final tick succeeds. Failed orders preserve stock, sales, and mission progress and may be retried. Best completion time and completed-order count persist.
 
-Factory scope remains fixed-layout, single-drone, finite-run simulation. Machine construction, conveyors, multiple drones, power, research, online leaderboards, and persistent controllers are future milestones. No language limit or local server boundary is relaxed for this chapter.
+Factory scope remains fixed-layout and single-drone. The continuous-operation milestone below extends its execution model. Machine construction, conveyors, multiple drones, power, research, and online leaderboards remain future milestones. No language limit or local server boundary is relaxed for this chapter.
 
 ## Configurable crop-care milestone — implemented
 
@@ -98,4 +98,20 @@ Requested after the factory work: review The Farmer Was Replaced as a reference,
 | C08 | Save migration | Existing classic/factory saves acquire a disabled versioned care extension. Expansion preserves soil and sprinkler coordinates. |
 | C09 | Deterministic bounds | New actions cost one tick; queries retain operation limits; invalid actions consume no supplies or coins. |
 
-Exact implemented quantities, costs, deadlines, and APIs are in [CROP_CARE.md](CROP_CARE.md). These are game rules, not real-world agronomic guidance. Future weather/pests/diseases and continuous controllers remain outside this milestone.
+Exact implemented quantities, costs, deadlines, and APIs are in [CROP_CARE.md](CROP_CARE.md). These are game rules, not real-world agronomic guidance. Weather, pests, and diseases remain future work. Continuous controllers were delivered separately in the following milestone.
+
+## Continuous operation — implemented
+
+| ID | Requirement | Acceptance criterion |
+| --- | --- | --- |
+| D01 | Optional continuous mode | Both chapters offer bounded and resumable execution; existing 400-action mode remains intact. |
+| D02 | Explicit continuation | Functions, expressions, loops, variables, and multi-tile routes resume after each action without replay. |
+| D03 | Shared clock | One action advances all world systems exactly once; calculations, Pause, and wall time do not. |
+| D04 | Responsive controls | Pause and Stop keep the last displayed action; Step performs at most one action; stale responses are ignored. |
+| D05 | Bounded work | Each step has a 20,000-operation/100-message budget; source, values, calls, stacks, and checkpoint size are bounded. |
+| D06 | Portable recovery | World and program position save together; reload/import/server restart restore paused; old saves default to bounded mode. |
+| D07 | Ordered updates | Single-flight requests carry versioned checkpoints; source/world binding and response revisions prevent accidental mismatches. |
+| D08 | Runnable automation | Continuous farming and bakery examples sustain production with all eight growing-option combinations. |
+| D09 | Verification | Interpreter parity, deterministic retry, malformed checkpoints, failure boundaries, real HTTP tests, and browser controls are checked. |
+
+This milestone serves one drone and retains full snapshots. Multi-controller scheduling, buildable factories, conveyors, offline progress, and public hosting are not implemented. See [CONTINUOUS.md](CONTINUOUS.md) for exact limits, endpoint/schema details, and pause boundaries.

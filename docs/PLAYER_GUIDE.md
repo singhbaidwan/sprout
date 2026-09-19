@@ -12,10 +12,11 @@ In **Home farm**, you start with 20 coins, a 6×6 field, and three ripe wheat pl
 
 | Control | Behavior |
 | --- | --- |
-| Run code | Compile a bounded run from the current field; animate its commands. |
-| Pause / Resume | Pause or resume the queued commands. |
+| Run mode | Bounded run (up to 400 actions) or Continuous (resumable long-running program). |
+| Run code | Start the selected execution mode from the current field. |
+| Pause / Resume | Freeze the displayed farm, then continue the same program. |
 | Step | Prepare a run if needed and perform one drone action. |
-| Stop | Discard queued commands. Keep only the progress already displayed. |
+| Stop | Clear queued commands or the continuous checkpoint. Keep displayed farm progress. |
 | Speed | Set animation speed to 1×, 2×, 4×, or 8×. Game outcomes are unchanged. |
 | Load example | Replace editor text with a working example; it does not reset the farm. |
 | Select a tile | Inspect a plot without moving the drone. |
@@ -42,7 +43,7 @@ harvest()
 
 Each successful action advances one tick. Water lasts for 24 ticks, including the tick of the `water()` command. Crops grow once per action while watered, then stop growing when dry. Mature crops never wilt. Working on other plots grows all watered crops simultaneously.
 
-Planting costs coins, harvesting sells the crop automatically, and seeds are purchased automatically when planted. There is no separate inventory. If your balance is zero, a wheat seed is free so you can recover. The drone has unlimited solar power and water; there are no refill chores in this version.
+Planting costs coins, harvesting sells the crop automatically, and seeds are purchased automatically when planted. There is no separate inventory. If your balance is zero, a wheat seed is free so you can recover. The drone has unlimited solar power. Water refills are only needed when the optional Irrigation system is enabled.
 
 | Crop | Seed cost | Sale value | Growth ticks | Unlock cost |
 | --- | --- | --- | --- | --- |
@@ -89,7 +90,7 @@ Built-in helpers: `range`, `len`, `min`, `max`, `abs`, `int`, `str`, `print`. `m
 
 Unavailable: imports/packages, objects/attributes/methods, file/network access, classes, decorators, annotations, lambdas, comprehensions, slicing, exponentiation, f-strings, string `%` formatting, keyword/default/variadic function arguments, nested function definitions, exception handling, `global`, `nonlocal`, and arbitrary Python execution.
 
-Each run has limits of **400 drone actions**, **20,000 interpreter operations**, **16,000 source characters**, and **100 print calls**. Use finite cycles and rerun them. Even a loop without actions is bounded. Run-local variables reset on each new run; the farm persists.
+Each **Bounded run** has limits of **400 drone actions**, **20,000 interpreter operations**, **16,000 source characters**, and **100 print calls**. Use finite cycles and rerun them. Even a loop without actions is bounded. Run-local variables reset on each new run; the farm persists. In Continuous mode, variables and program position persist between actions and across reloads. Its 20,000-operation and 100-message budgets renew after each action. See [Continuous automation](CONTINUOUS.md) for limits and recovery.
 
 ## Home farm example progression
 
@@ -191,7 +192,7 @@ Timed orders unlock after 4 bread delivered. They count bread delivered **after*
 - **Rock or edge:** use `navigate_to()` or change the manual route. Factory movement never wraps.
 - **Order failed:** stock ingredients first, increase batch sizes, overlap machine work, and reduce empty trips. Progress and coins from regular sales are kept.
 
-Export/import includes both chapters, their code, and playback speeds. Save files must be under 290 KB; the server allows 300 KB for save validation to accommodate two maximum-length programs. The run API still has its original 100 KB request limit.
+Export/import includes both chapters, their code, and playback speeds. Save files must be under 590 KB; the server allows 600 KB for save validation to accommodate both programs and continuous checkpoints. The run API still has its original 100 KB request limit.
 
 ## Optional growing systems
 
@@ -200,3 +201,7 @@ Open **Growing options** above the field. Fertilizer, Irrigation, and Soil healt
 The **Smart crop care** example automates nutrients, fertilizer, watering, well visits, and factory cargo checks. **Sprinkler network** installs automated watering coverage as funds allow. These are two additional shared examples alongside the four chapter-specific examples.
 
 See [CROP_CARE.md](CROP_CARE.md) for the complete rules, costs, sensor API, toggle behavior, and three optional growing goals. The in-game **Growing systems** guide contains the same operational reference. With options on, older simple examples may need supply and yield checks; use the new examples as starting points.
+
+## Continuous autopilot
+
+Load **Continuous autopilot** to select Continuous mode and start a repeating six-plot farming routine. In Breadworks it also processes wheat and flour and delivers bread. Both examples handle any combination of growing options. Pause and Step preserve your place; Stop lets you edit. Reload restores paused, even after restarting Python. Nothing grows while the page is closed. See [the complete guide](CONTINUOUS.md).

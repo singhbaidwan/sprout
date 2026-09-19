@@ -27,6 +27,7 @@ farm.js: responsive canvas world        POST /api/run → interpreter → Farm /
 | `farm/world.py` | Explicit scenario selection and validation; classic and factory state versions remain distinct. |
 | `farm/saves.py` | Portable envelopes, chapter/world matching, legacy migration. |
 | `static/factory-ui.js` | Catalog-driven machine dashboard, order status, factory inspection and guide. |
+| `farm/continuous.py` | Compile validated syntax to bounded instructions; one-action scheduling and typed portable continuations. |
 | `farm/interpreter.py` | Python AST validation, expression/statement interpretation, resource budgets, action frames, errors. |
 | `farm/server.py` | Explicit static asset allowlist and JSON endpoints, request/origin/host checks. |
 | `static/index.html` | Semantic game workbench, controls, dialogs, canvas, editor. |
@@ -44,7 +45,7 @@ An action validates its preconditions, applies its effect, advances the tick, gr
 
 `Farm` copies and validates provided state. `snapshot()` produces independent deep copies. Expansion remaps existing `(x, y)` coordinates into the wider row stride.
 
-## Script execution and playback
+## Bounded script execution and playback
 
 1. The browser sends current displayed state and editor text to `POST /api/run`.
 2. Python validates state, parses and validates the entire syntax tree, and interprets it with explicit limits.
@@ -57,11 +58,19 @@ This is a **bounded simulation followed by playback**, not a persistent Python p
 
 Every run begins a fresh variable/function environment while keeping farm state. Scripts have no variables that persist across runs. Editor and workshop changes are disabled during active playback. Browser speed affects animation delay only.
 
+## Continuous execution
+
+The optional Continuous mode uses `farm/continuous.py`. A compiler converts the validated allowlisted AST into explicit instructions, including jump targets, function entries, and for-loop records. The VM resumes expression/call/loop stacks until one action succeeds, the program finishes, or its work quota faults. `Farm.action()` remains the single shared world-clock boundary. Navigation stores remaining moves and yields after each tile.
+
+Each request rebuilds instructions from source and validates the typed checkpoint; it never executes imported bytecode. Checkpoints bind source and world via digests, preserve variable aliases with bounded references, and contain no arbitrary host objects. No server session or secret is required. The browser commits world/continuation together, verifies the response revision, and ignores requests invalidated by Pause/Stop. A failed network request retries from the last acknowledged snapshot without duplicate transfers.
+
+Continuous work is capped at 20,000 operations and 100 print messages **between actions**, retaining the source/value/call limits below. Continuations are limited to 48 KB, 2,500 expression values/encoded objects, and 256 active for loops. Reload and import restore paused. Full specification and compatibility rules: [CONTINUOUS.md](CONTINUOUS.md).
+
 ## Interpreter boundaries
 
 There is no `exec`, `eval`, dynamic import, attribute traversal, or unrestricted host object in the player language. Calls resolve only to explicit game functions, bounded helpers, or interpreted player functions. Assignments only target names; list mutation, unpacking, slicing, imports, classes, lambdas, comprehensions, decorators, keyword arguments, annotations, and exceptions are unsupported.
 
-| Resource | Limit per run |
+| Resource | Limit per bounded run (continuous differences above) |
 | --- | --- |
 | Source | 16,000 characters |
 | AST | 2,500 nodes, 60 levels |
@@ -79,13 +88,14 @@ This is a small game language, not a complete implementation of Python. In parti
 
 ## HTTP API
 
-All POST requests require `Content-Type: application/json`. Run/upgrade/order requests have the original 100,000-byte limit. Portable save validation permits 300,000 bytes for two maximum-length programs, including JSON escaping overhead. HTTP errors have `{ "error": "message" }`. Script errors are part of a successful `/api/run` response so earlier frames can still play.
+All POST requests require `Content-Type: application/json`. Run/upgrade/order requests have the original 100,000-byte limit. Portable save validation and controller stepping permit 600,000 bytes for programs and checkpoints, including JSON escaping overhead. HTTP errors have `{ "error": "message" }`. Script errors are part of a successful `/api/run` response so earlier frames can still play.
 
 | Endpoint | Input | Output |
 | --- | --- | --- |
 | `GET /api/bootstrap` | None | `{state, crops, missions, examples, chapters, cultivation}` |
 | `POST /api/validate` | `{state}` | `{state}` rebuilt from known fields |
 | `POST /api/run` | `{state, code}` | `{frames, error, actions, operations}` |
+| `POST /api/controller/step` | `{state, code, checkpoint?}` | `{frames, state, checkpoint, revision, done, error, actions, operations}` |
 | `POST /api/unlock` | `{state, item}` | `{state, message}` |
 | `POST /api/settings` | `{state, settings}` with three booleans | `{state, message}`; change growing options without ticking |
 | `POST /api/order` | `{state}` in factory chapter | `{state, message}`; start/retry a timed order |
@@ -95,9 +105,9 @@ The server accepts only local Host headers for its actual port and rejects misma
 
 ## Persistence
 
-The browser stores a version 2 `sprout-save` envelope under `sprout.save.v2`, with an active chapter and a map of chapter state, editor text, and playback speed. `farm/saves.py` migrates the original `sprout.save.v1` envelope into the classic chapter; the classic world schema stays at version 1, while Breadworks uses version 2 with `scenario: "factory"`. The envelope can contain one or both chapters, and its chapter key must match the validated world. `POST /api/save/validate` validates portable envelopes, rebuilding known fields. Imports validate before confirmation and back up the current envelope under `sprout.save.backup` before replacement; export produces a JSON download. The old v1 key is retained during migration. It saves after each displayed action, after upgrades, after edits (debounced), and on page exit. A reload validates state with Python before using it. Only played actions are restored; queued actions are never resumed after a reload.
+The browser stores a version 2 `sprout-save` envelope under `sprout.save.v2`, with an active chapter and a map of chapter state, editor text, playback speed, optional execution mode, and optional versioned controller checkpoint. `farm/saves.py` migrates the original `sprout.save.v1` envelope into the classic chapter; the classic world schema stays at version 1, while Breadworks uses version 2 with `scenario: "factory"`. The envelope can contain one or both chapters, and its chapter key must match the validated world. `POST /api/save/validate` validates portable envelopes, rebuilding known fields. Imports validate before confirmation and back up the current envelope under `sprout.save.backup` before replacement; export produces a JSON download. The old v1 key is retained during migration. It saves after each displayed action, after upgrades, after edits (debounced), and on page exit. A reload validates state with Python before using it. Only displayed actions are restored. Bounded queues are discarded; continuous checkpoints restore paused and retain variables and control position.
 
-Saves belong to the browser origin, so `localhost`, `127.0.0.1`, and different ports each have separate saves. Private browsing or clearing browser data can remove progress. Multiple tabs use last-write-wins behavior. There is no cloud sync, anti-cheat guarantee, save migration beyond version 1, or account recovery.
+Saves belong to the browser origin, so `localhost`, `127.0.0.1`, and different ports each have separate saves. Private browsing or clearing browser data can remove progress. Multiple tabs use last-write-wins behavior. There is no cloud sync, anti-cheat guarantee, or account recovery.
 
 ## Local-use scope and extension points
 
@@ -117,11 +127,11 @@ Recipe inputs are removed at batch start. `remaining > 0` represents one reserve
 
 The item-conservation test compares wheat-equivalent quantities across cargo, chest, machine input/output, active batches, and delivered products: 1 wheat = 1 unit, 1 flour = 2, 1 bread = 2. The total must equal starting chest wheat plus harvested yield in every frame of the example campaign. Coins and mission rewards are separate from these quantities.
 
-`navigate_to()` computes a bounded breadth-first route over at most 64 tiles. Its route steps call the same interpreter action path as manual moves, retaining source lines, action/operation quotas, snapshots, and partial progress when the 400-action budget ends. Named destinations resolve from the Python catalog. Unsupported or blocked destinations fail before movement. Each scenario retains the whole-run response/playback model.
+`navigate_to()` computes a bounded breadth-first route over at most 64 tiles. Its route steps call the same interpreter action path as manual moves, retaining source lines, action/operation quotas, snapshots, and partial progress when the 400-action budget ends. Named destinations resolve from the Python catalog. Unsupported or blocked destinations fail before movement. Bounded mode retains whole-run playback; Continuous stores remaining route moves in its checkpoint.
 
 Factory saves include cargo, chest, machine input/output/remaining, upgrades, additional production stats, six mission IDs, and order status/start tick/start delivered/best time/completed count. Known fields are rebuilt and bounds validated. Save validation is consistency checking for an editable local game, not server-authoritative anti-cheat.
 
-The UI stores an active chapter plus per-chapter state/code/speed. Chapter changes and order starts are disabled during request preparation or playback. Stop invalidates request tokens; late responses cannot overwrite a reset or a newer operation. Reset affects only the active chapter. Full frame snapshots are retained for this small fixed map; continuous controllers, multiple drones, and larger worlds require the scheduler and checkpoint work in the roadmap.
+The UI stores an active chapter plus per-chapter state/code/speed. Chapter changes and order starts are disabled during request preparation or playback. Stop invalidates request tokens; late responses cannot overwrite a reset or a newer operation. Reset affects only the active chapter. Full frame snapshots are retained for this small fixed map; multiple drones and larger worlds require extending the single-controller scheduler with conflict resolution and one combined tick, as described in the roadmap.
 
 ## Optional cultivation extension
 
@@ -133,4 +143,4 @@ Harvest handlers calculate sale/yield bonuses before the care harvest hook clear
 
 Configurations are validated as exactly three booleans and applied without ticking. Browser request tokens protect settings changes from late responses, and controls are disabled during playback. Toggling off does not remove inventory or equipment. Crop removal always clears its treatment. Expansion remaps the care grid and sprinkler indices with the same coordinate-preservation rule as crops.
 
-Shared examples query scenario and enabled features, illustrating independent systems without requiring imports or player access to host objects. All original interpreter limits and local-only hosting assumptions remain in effect.
+Shared examples query scenario and enabled features, illustrating independent systems without requiring imports or player access to host objects. Bounded-run limits and local-only hosting assumptions remain in effect; Continuous renews its work quota at each action as described above.

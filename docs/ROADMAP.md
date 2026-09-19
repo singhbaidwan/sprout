@@ -1,6 +1,6 @@
 # Roadmap — from a farm to a programmable factory
 
-**Updated:** 2026-09-13. **Playable today:** Home farm, the Breadworks production chapter, and configurable crop care in both. Future stages below are proposals, not delivery commitments.
+**Updated:** 2026-09-20. **Playable today:** Home farm, the Breadworks production chapter, configurable crop care, and continuous automation in both. Future stages below are proposals, not delivery commitments.
 
 ## Direction
 
@@ -16,6 +16,7 @@ The initial inspiration was Factorio's emphasis on factories, infrastructure, re
 | 1 — Save foundation | Portable JSON saves, legacy migration, import validation and backup, CI configuration for Python 3.10–3.14 and JS syntax. | Published as `c42bfbe`. Local tests passed; remote CI execution is separately observable. Embedded-browser download completion was not confirmed. |
 | 2 — First production chain | Separate Breadworks scenario, cargo, chest, mill, oven, depot, recipes, obstacles and routes, live machine status, six missions, three upgrades, four examples, optional timed delivery orders. | A finite script processes harvested wheat into delivered bread with conserved items. Saves preserve both chapters and active batches. One drone, fixed buildings, no conveyors or construction yet. |
 | 2a — Crop care | Independent fertilizer, irrigation, and soil-health options; placeable sprinklers, supply management, compost, two shared scripts, and three extra goals. | All eight option combinations tested in both chapters. Existing saves migrate with options off. [Full rules](CROP_CARE.md). |
+| 3 — Continuous operation | Optional resumable Python execution, one-action shared-clock boundary, bounded work, ordered browser updates, portable checkpoints, and two continuous examples. | One drone; reload/import restore paused. Deterministic retry and checkpoint tests pass, including all care combinations. [Rules and limitations](CONTINUOUS.md). |
 
 ```mermaid
 flowchart LR
@@ -44,16 +45,15 @@ The game now poses several distinct problems: a full drone cannot harvest; a ful
 
 | Stage | Deliverable | Completion check |
 | --- | --- | --- |
-| 3 — Continuous operation | Resumable interpreter, shared world scheduler, per-tick instruction quotas, pause/step/checkpoints, ordered state updates. | Long-running factories stay responsive; deterministic replays match; Stop/Pause act at a documented simulation boundary. |
 | 4 — Logistics and building | A second drone, movement conflicts, placeable machines, limited-capacity conveyors, saved routes. | Controllers cooperate without duplicate items, permanent starvation, or double-speed world time. Blueprints preserve validated layouts. |
 | 5 — Deeper production | Power, research, additional byproduct recipes, multiple recipes, varied contracts, throughput and idle-time graphs. | Players can see a bottleneck, change code, and measure improved output. |
 | 6 — Scale and sharing | Larger maps, script/blueprint sharing, performance profiling, then optional accounts and hosting. | Representative worlds meet performance budgets; public execution has an isolated deployment design. |
 
 These are independent milestones requiring scope decisions, rather than a promise to implement everything in sequence immediately. Completed authorized milestones are verified, documented, committed, and pushed before the next begins.
 
-## Continuous simulation design
+## Multi-controller simulation design — future extension
 
-The present game simulates a whole bounded run and returns full state snapshots for browser playback. That is sufficient for the fixed one-drone Breadworks. Several persistent controllers need a different execution boundary:
+The present game supports bounded playback and a resumable single-drone controller, sharing the existing one-action world clock. Several simultaneous controllers will need to extend that boundary:
 
 1. Read the world at the start of the tick.
 2. Resume each controller with a bounded instruction quota until it yields an action, finishes, or faults.
@@ -63,15 +63,15 @@ The present game simulates a whole bounded run and returns full state snapshots 
 
 Use deterministic rotating priority for contested actions. Pause freezes the shared clock. Presentation speed changes animation only. Infinite computation loops must suspend or fault without freezing the game.
 
-Do not remove the 400-action limit or create unrestricted host-Python threads to simulate continuity. First build explicit resumable execution frames and per-tick budgets. Preserve the named-call API and the ban on arbitrary attributes/imports unless a narrowly scoped language extension is designed and tested.
+Keep the existing 400-action bounded mode and the explicit continuous execution frames with per-step budgets. Do not introduce unrestricted host-Python threads. Preserve the named-call API and the ban on arbitrary attributes/imports unless a narrowly scoped language extension is designed and tested.
 
-Session revision numbers should reject stale mutations. Checkpoint world state and controller position together. Ordered deltas with periodic snapshots can replace full frames after profiling; no framework rewrite is needed merely to add these mechanics.
+The current browser checks request tokens and checkpoint revisions, and checkpoints world and controller together. A future shared server session must also reject stale mutations authoritatively. Ordered deltas with periodic snapshots can replace full frames after profiling; no framework rewrite is needed merely to add these mechanics.
 
 ## Save compatibility
 
 The version 2 portable envelope already holds independent chapter saves. Classic worlds remain version 1; Breadworks worlds use version 2 with an explicit scenario, inventories, machine progress, upgrades, and order state. Legacy single-farm envelopes migrate into classic mode.
 
-Future schemas must explicitly migrate existing chapters, including ingredients already consumed by active batches. Continuous controllers need versioned execution frames and safe reload/stop behavior. Add migration fixtures before changing storage and retain a recoverable backup.
+Future schemas must explicitly migrate existing chapters, including ingredients already consumed by active batches. Continuous controllers now have versioned execution frames and paused reload behavior; old saves default to finite mode. Add migration fixtures before changing storage and retain a recoverable backup.
 
 Classic harvests sell immediately and classic scripts assume wrapped edges. Keep those semantics scoped to Home farm. Factory APIs and map rules must never silently reinterpret classic saves or tutorials.
 

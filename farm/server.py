@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 
 from .engine import CROPS, MISSIONS, GameError, new_state
 from .interpreter import run_script
+from .continuous import step_script
 from .saves import validate_save
 from . import cultivation
 from .world import create_game, validate_game
@@ -18,7 +19,7 @@ ASSETS = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascri
           "/farm.js": ("farm.js", "text/javascript"), "/factory-ui.js": ("factory-ui.js", "text/javascript"), "/style.css": ("style.css", "text/css"),
           "/cultivation-ui.js": ("cultivation-ui.js", "text/javascript"), "/favicon.svg": ("favicon.svg", "image/svg+xml")}
 MAX_BODY = 100000
-MAX_SAVE_BODY = 300000
+MAX_SAVE_BODY = 600000
 
 
 class GameHandler(BaseHTTPRequestHandler):
@@ -55,9 +56,9 @@ class GameHandler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/api/bootstrap":
             examples = {name: (EXAMPLES / (filename + ".py")).read_text() for name, filename in {
-                "starter": "starter", "full_field": "full_field", "smart_farmer": "smart_farmer", "carrots": "carrots"
+                "starter": "starter", "full_field": "full_field", "smart_farmer": "smart_farmer", "carrots": "carrots", "continuous": "continuous"
             }.items()}
-            factory_examples = {name: (EXAMPLES / f"factory_{name}.py").read_text() for name in ("starter", "harvest", "bakery", "orders")}
+            factory_examples = {name: (EXAMPLES / f"factory_{name}.py").read_text() for name in ("starter", "harvest", "bakery", "orders", "continuous")}
             care_examples = {name: (EXAMPLES / f"{name}.py").read_text() for name in ("crop_care", "irrigation")}
             examples.update(care_examples); factory_examples.update(care_examples)
             return self.respond(200, {"state": new_state(), "crops": CROPS, "missions": MISSIONS, "examples": examples,
@@ -76,7 +77,7 @@ class GameHandler(BaseHTTPRequestHandler):
         try:
             path = urlsplit(self.path).path
             length = int(self.headers.get("Content-Length", "0"))
-            limit = MAX_SAVE_BODY if path == "/api/save/validate" else MAX_BODY
+            limit = MAX_SAVE_BODY if path in ("/api/save/validate", "/api/controller/step") else MAX_BODY
             if not 0 < length <= limit:
                 return self.respond(413, {"error": f"Request must be between 1 and {limit:,} bytes."})
             payload = json.loads(self.rfile.read(length))
@@ -86,6 +87,9 @@ class GameHandler(BaseHTTPRequestHandler):
                 return self.respond(200, {"save": validate_save(payload.get("save"))})
             if path == "/api/validate":
                 return self.respond(200, {"state": validate_game(payload.get("state"))})
+            if path == "/api/controller/step":
+                state = validate_game(payload.get("state"))
+                return self.respond(200, step_script(payload.get("code"), state, payload.get("checkpoint")))
             if path == "/api/run":
                 state = validate_game(payload.get("state"))
                 return self.respond(200, run_script(payload.get("code"), state))
@@ -104,7 +108,7 @@ class GameHandler(BaseHTTPRequestHandler):
                 message = farm.start_order()
                 return self.respond(200, {"state": farm.snapshot(), "message": message})
             return self.respond(404, {"error": "Not found."})
-        except (ValueError, TypeError, UnicodeDecodeError) as exc:
+        except (ValueError, TypeError, UnicodeDecodeError, RecursionError) as exc:
             self.respond(400, {"error": str(exc)[:300]})
 
 

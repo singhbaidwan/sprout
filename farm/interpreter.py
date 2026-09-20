@@ -141,6 +141,8 @@ class Interpreter:
             return self.scopes[-1][name]
         if name in self.globals:
             return self.globals[name]
+        if name == "store_cargo":
+            raise ScriptError("store_cargo() is a helper from Harvest & store, not a built-in command. Include its def store_cargo(): block above your loop, or load the complete Harvest & store example.", self.line)
         raise ScriptError(f"Unknown name '{name}'. Check its spelling or define it first.", self.line)
 
     def block(self, body):

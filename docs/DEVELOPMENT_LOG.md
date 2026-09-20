@@ -225,3 +225,10 @@ The owner asked to continue with the next milestone. Selected Roadmap Stage 3 af
 Stage 4 can add placeable machines and bounded conveyors, then cooperative drones with reservations and conflict resolution. Today's scheduler is single-drone; it must not simply advance the whole world once per new drone. Full snapshots remain appropriate for the small map. There is no offline execution, shared server session, public hosting, or unrestricted Python. Remote CI execution and embedded-browser file-download completion are separate from the verified local suite and import flow.
 
 This milestone is committed and pushed as one coherent change under the owner's standing Git preference; the final task response records the verified published commit.
+
+## 2026-09-20 — missing helper and bounded activity log
+
+- Inspected the reported Breadworks editor and reproduced the cause: its copied field loop called `store_cargo()` but omitted that example's function definition. The script also continued to harvest after a full-chest warning. Restored the complete helper and enclosing field routine so storage failure exits safely; no farm actions were run on the user's active order.
+- Added an actionable missing-helper diagnostic to both interpreter modes. Updated Harvest & store to preserve the required fertilized harvest yield before navigating to the chest, and clarified that both helper definitions belong to the example.
+- Fixed the activity log at 180px with its own vertical scrollbar, constrained wrapping and flex widths, keyboard focus, and a Latest button. New messages follow the bottom only when already near it, allowing players to read older output. The existing 150-row cap remains.
+- Verification: full Python suite (82 tests), JavaScript syntax, and browser checks of helper restoration and log scrolling/long-message containment. This is a separate fix milestone before multiple-drone work.

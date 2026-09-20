@@ -22,3 +22,8 @@
 @media(max-width:600px){.care-panel summary{padding:13px}.care-panel summary small{font-size:10px;line-height:1.5}.care-panel summary .pill{font-size:9px;flex-shrink:0}.care-settings{grid-template-columns:1fr;gap:8px;padding:0 13px 12px}.care-option{padding:10px}.care-dashboard{align-items:flex-start;flex-direction:column;padding:13px}.care-goals{grid-template-columns:1fr;gap:12px;padding:0 13px 12px}.care-note{padding:0 13px 12px}.tile-inspector{max-width:calc(100% - 20px)}}
 
 .execution-settings{padding:12px 20px 0;display:flex;gap:8px 16px;align-items:center;flex-wrap:wrap}.execution-settings label{font-size:12px;font-weight:600;white-space:nowrap}.execution-settings select{margin-left:8px;padding:6px;border:1px solid var(--border,#dce3d6);border-radius:6px;background:#fafbf7;color:#254e36;font:inherit}.execution-settings p{margin:0;flex:1 1 220px;color:#6b7768;font-size:11px;line-height:1.5}.guide-tabs{flex-wrap:wrap}
+
+/* Activity stays inside its own viewport, even with long Python output. */
+.console{flex:0 0 180px;height:180px;min-height:0;max-height:180px;min-width:0;max-width:100%;overflow-y:scroll;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#a5b58e #f1f5e9}
+.console::-webkit-scrollbar{width:8px}.console::-webkit-scrollbar-track{background:#f1f5e9}.console::-webkit-scrollbar-thumb{background:#a5b58e;border-radius:8px}
+.log-line{min-width:0;max-width:100%}.log-message{min-width:0;flex:1;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}

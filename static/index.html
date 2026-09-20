@@ -59,8 +59,8 @@
         <div class="playback-settings"><span><span class="status-dot" id="runtime-dot"></span><span id="runtime-status" role="status">Connecting to Python…</span></span><label for="speed-select">Speed <select id="speed-select"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option><option value="8">8×</option></select></label></div>
         <div class="editor-shell" id="editor-shell"><div id="line-numbers" class="line-numbers" aria-hidden="true"></div><div class="code-area"><pre id="code-highlight" aria-hidden="true"><code></code></pre><textarea id="code-editor" aria-label="Python drone program" maxlength="16000" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off"></textarea></div></div>
         <div class="editor-status"><span><span class="python-indicator"></span> Farm Python</span><span id="cursor-position">Ln 1, Col 1</span><span>4 spaces</span></div>
-        <div class="console-heading"><h3>Activity log <span id="log-count">0</span></h3><button id="clear-log" class="text-button">Clear</button></div>
-        <div id="console" class="console" role="log" aria-label="Program activity log" aria-live="off"></div>
+        <div class="console-heading"><h3>Activity log <span id="log-count">0</span></h3><div><button id="latest-log" class="text-button">Latest ↓</button> <button id="clear-log" class="text-button">Clear</button></div></div>
+        <div id="console" class="console" tabindex="0" role="log" aria-label="Program activity log" aria-live="off"></div>
         <div class="editor-tip"><span aria-hidden="true">✦</span><p>Your first three wheat plots are ready. Press <strong>Run code</strong> to bring in your first harvest.</p></div>
       </section>
     </div>

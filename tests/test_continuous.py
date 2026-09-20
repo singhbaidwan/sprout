@@ -166,6 +166,12 @@ print(a is b, alias == sample, get_crop() is not None, -x, not x, x % 3)
         with self.assertRaises(GameError):
             validate_checkpoint(source, state, bad)
 
+    def test_missing_example_helper_has_actionable_error_in_both_modes(self):
+        for result in (run_script('store_cargo()', new_factory()), step_script('store_cargo()', new_factory())):
+            self.assertIn('helper from Harvest & store', result['error']['message'])
+            self.assertIn('def store_cargo():', result['error']['message'])
+            self.assertEqual(result['actions'], 0)
+
     def test_checkpoint_memory_limit_keeps_completed_world(self):
         source = '\n'.join(f'v{i} = str({i}) + "." * 800' for i in range(65)) + '\nwait()'
         result = step_script(source, new_state())

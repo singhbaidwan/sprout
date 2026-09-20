@@ -40,13 +40,14 @@ function toast(message, error = false) {
 }
 
 function log(message, kind = 'info', line = null) {
+  const follow = $('console').scrollHeight - $('console').scrollTop - $('console').clientHeight < 28;
   const row = document.createElement('div'); row.className = `log-line ${kind}`;
   const stamp = document.createElement('span'); stamp.className = 'log-time';
   stamp.textContent = line ? `L${String(line).padStart(2, '0')}` : 'SYS';
   const content = document.createElement('span'); content.className = 'log-message'; content.textContent = message;
   row.append(stamp, content); $('console').append(row);
   while ($('console').children.length > 150) $('console').firstChild.remove();
-  $('console').scrollTop = $('console').scrollHeight;
+  if (follow) $('console').scrollTop = $('console').scrollHeight;
   $('log-count').textContent = String(++logs);
 }
 
@@ -373,6 +374,7 @@ $('step-button').addEventListener('click', () => mode === 'paused' ? advanceOne(
 $('stop-button').addEventListener('click', () => stop());
 $('speed-select').addEventListener('change', save);
 $('execution-select').addEventListener('change', () => { setMode('idle'); save(); });
+$('latest-log').addEventListener('click', () => { $('console').scrollTop = $('console').scrollHeight; });
 $('clear-log').addEventListener('click', () => { $('console').replaceChildren(); logs = 0; $('log-count').textContent = '0'; });
 $('example-select').addEventListener('change', event => {
   const value = event.target.value;

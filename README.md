@@ -115,7 +115,7 @@ Run from the project root:
 python3 -m unittest discover -s tests -v
 ```
 
-The 81 current tests cover both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
+The 82 current tests cover both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
 
 Optional JavaScript syntax checks, if Node.js is available (POSIX shell):
 

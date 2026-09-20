@@ -205,3 +205,9 @@ See [CROP_CARE.md](CROP_CARE.md) for the complete rules, costs, sensor API, togg
 ## Continuous autopilot
 
 Load **Continuous autopilot** to select Continuous mode and start a repeating six-plot farming routine. In Breadworks it also processes wheat and flour and delivers bread. Both examples handle any combination of growing options. Pause and Step preserve your place; Stop lets you edit. Reload restores paused, even after restarting Python. Nothing grows while the page is closed. See [the complete guide](CONTINUOUS.md).
+
+## Example helpers and activity log
+
+`store_cargo()` is defined inside **Harvest & store**; it is not a built-in API. Copy its `def store_cargo():` block along with `tend_field()` and the final `tend_field()` call. Load the complete example if your edited copy is missing those helpers. A full chest exits the routine safely; process inventory before harvesting again.
+
+The activity log keeps its latest 150 entries in a fixed-height scroll area. Long output wraps inside the panel. Scroll up to read earlier entries without being pulled back down; **Latest ↓** returns to live updates. The log can receive keyboard focus for scrolling.

@@ -4,7 +4,7 @@
 
 Sprout is a playable, single-player browser game with a Python simulation. Write a short program, watch your drone work, earn harvest income, and improve your routine. The project runs locally with **no third-party dependencies**.
 
-**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. The [roadmap](docs/ROADMAP.md) separates implemented factory mechanics from future conveyors, power, and multiple drones.
+**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. Breadworks includes an optional two-drone team. The [roadmap](docs/ROADMAP.md) distinguishes implemented mechanics from proposed conveyors and power.
 
 ## Quick start
 
@@ -59,7 +59,13 @@ Select **02 · The Breadworks** at the top of the game. Its starter program turn
 - Complete six factory missions, purchase three upgrades, and deliver timed orders to beat your personal record.
 - Learn with four new examples: **First bread**, **Harvest & store**, **Farm to bakery**, and **Order runner**.
 
-This chapter uses one drone with bounded or continuous programs. Conveyors, machine placement, and power grids remain future work. See the [Breadworks guide](docs/PLAYER_GUIDE.md#the-breadworks--factory-chapter).
+This chapter supports solo bounded/continuous programs and an optional two-drone team. Conveyors, machine placement, and power grids remain future work. See the [Breadworks guide](docs/PLAYER_GUIDE.md#the-breadworks--factory-chapter).
+
+## Cooperate with two drones
+
+In Breadworks, choose **Run mode → Drone team (2)**, then **Load team starter** and **Run code**. A green farmer grows and stores wheat while a blue courier mills, bakes, and delivers. Switch **Editing** between the two independent programs. Each drone has its own cargo; both share storage, supplies, coins, and one simulation clock.
+
+Pause, Step, and saved continuations work for the whole team. Switching back to solo mode parks Drone 2 and keeps its cargo. The dashboard reports each drone's cargo, actions, and blocked attempts. See [Drone teams](docs/DRONE_TEAMS.md) for conflict rules and [Design direction](docs/DESIGN_DIRECTION.md) for research and proposed gameplay improvements.
 
 ## Customize crop growing
 
@@ -115,7 +121,7 @@ Run from the project root:
 python3 -m unittest discover -s tests -v
 ```
 
-The 82 current tests cover both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
+The 94 current tests cover both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, two-drone arbitration/conservation, and HTTP endpoints. Tests use temporary loopback sockets. The suite has been validated locally on Python 3.12 and 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
 
 Optional JavaScript syntax checks, if Node.js is available (POSIX shell):
 
@@ -152,7 +158,7 @@ Completed, verified features and milestones are committed and pushed to `origin`
 
 ## Where the game could go next
 
-The next substantial step is logistics and building: placeable machines, limited-capacity conveyors, and eventually cooperating drones. Continuous execution and portable checkpoints now provide the single-drone foundation. Later goals can introduce power, research, crop byproducts, and production graphs. These remain proposed work; the current Breadworks chapter establishes the inventory and processing rules they will need.
+Cooperating drones and portable team checkpoints are implemented. The recommended next step is an efficiency dashboard and reproducible contract scenarios, followed by crop byproduct production and buildable logistics. Power, research, and larger fleets remain proposals. See the [reference-game research and design priorities](docs/DESIGN_DIRECTION.md).
 
 Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/save design.
 

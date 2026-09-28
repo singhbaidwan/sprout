@@ -24,7 +24,12 @@ class ServerTests(unittest.TestCase):
         defaults = {'Content-Type': 'application/json'}
         defaults.update(headers or {})
         body = json.dumps(data) if data is not None else None
-        connection.request(method, path, body, defaults)
+        try:
+            connection.request(method, path, body, defaults)
+        except BrokenPipeError:
+            # An oversized Content-Length can be rejected before the client
+            # finishes writing its body. Still read and assert the HTTP status.
+            pass
         response = connection.getresponse()
         content = response.read()
         result = response.status, dict(response.getheaders()), content
@@ -81,6 +86,27 @@ class ServerTests(unittest.TestCase):
         for cp in (False, [], {}, {'version': True}):
             status, _, _ = self.request('POST', '/api/controller/step', {'state': new_state(), 'code': code, 'checkpoint': cp})
             self.assertEqual(status, 400)
+
+    def test_team_endpoint_resumes_and_rejects_wrong_chapter(self):
+        codes = ['while True:\n    wait()', 'while True:\n    wait()']
+        status, _, body = self.request('POST', '/api/team/step', {'state': new_factory(), 'codes': codes})
+        self.assertEqual(status, 200)
+        first = json.loads(body)
+        self.assertEqual(first['actions'], 2)
+        self.assertEqual(first['state']['tick'], 1)
+        payload = {'state': first['state'], 'codes': codes, 'checkpoint': first['checkpoint']}
+        status, _, body = self.request('POST', '/api/team/step', payload)
+        self.assertEqual(status, 200)
+        second = json.loads(body)
+        self.assertEqual(second['state']['tick'], 2)
+        self.assertEqual(second['revision'], 2)
+        _, _, repeated = self.request('POST', '/api/team/step', payload)
+        self.assertEqual(json.loads(repeated), second)
+        status, _, _ = self.request('POST', '/api/team/step', {'state': new_state(), 'codes': codes})
+        self.assertEqual(status, 400)
+        payload['codes'] = codes[:1]
+        status, _, _ = self.request('POST', '/api/team/step', payload)
+        self.assertEqual(status, 400)
 
     def test_unlock_endpoint(self):
         state = new_state(); state['coins'] = 80

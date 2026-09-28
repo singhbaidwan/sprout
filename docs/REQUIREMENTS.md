@@ -80,7 +80,7 @@ Upgrades: cargo 8→16 for 50 coins, mill 4→2 ticks for 75, oven 6→3 ticks f
 
 Optional orders unlock at 4 lifetime delivered bread: deliver 12 more within 180 action ticks for 40 coins. Stockpiles count; a delivery on the final tick succeeds. Failed orders preserve stock, sales, and mission progress and may be retried. Best completion time and completed-order count persist.
 
-Factory scope remains fixed-layout and single-drone. The continuous-operation milestone below extends its execution model. Machine construction, conveyors, multiple drones, power, research, and online leaderboards remain future milestones. No language limit or local server boundary is relaxed for this chapter.
+The original factory milestone was fixed-layout and single-drone; the team extension below adds a second drone. The continuous-operation milestone below extends its execution model. Machine construction, conveyors, power, research, and online leaderboards remain future milestones. No language limit or local server boundary is relaxed for this chapter.
 
 ## Configurable crop-care milestone — implemented
 
@@ -114,4 +114,20 @@ Exact implemented quantities, costs, deadlines, and APIs are in [CROP_CARE.md](C
 | D08 | Runnable automation | Continuous farming and bakery examples sustain production with all eight growing-option combinations. |
 | D09 | Verification | Interpreter parity, deterministic retry, malformed checkpoints, failure boundaries, real HTTP tests, and browser controls are checked. |
 
-This milestone serves one drone and retains full snapshots. Multi-controller scheduling, buildable factories, conveyors, offline progress, and public hosting are not implemented. See [CONTINUOUS.md](CONTINUOUS.md) for exact limits, endpoint/schema details, and pause boundaries.
+This milestone serves one drone and retains full snapshots. The following team milestone adds multi-controller scheduling; buildable factories, conveyors, offline progress, and public hosting remain unimplemented. See [CONTINUOUS.md](CONTINUOUS.md) for exact limits, endpoint/schema details, and pause boundaries.
+
+
+## Optional two-drone team — implemented
+
+| ID | Requirement | Acceptance criterion |
+| --- | --- | --- |
+| E01 | Optional complexity | Breadworks offers solo modes and Drone team (2); Home farm stays single-drone. |
+| E02 | Independent programs | Two editable bounded Python programs, distinct variables, cargo, positions and routes; starter farmer/courier pair. |
+| E03 | One simulation clock | Read the starting world, plan up to one action per drone, resolve, then advance growth/machines/orders once. |
+| E04 | Shared resource safety | Contested work takes alternating priority; retry queries on blocked actions; no duplicated items or negative stock. Separate air lanes permit movement crossings. |
+| E05 | Visible coordination | Color/number-distinguished drones; per-drone cargo, action and blocked counts; labeled activity and source lines. |
+| E06 | Recovery | Team errors identify the drone and commit neither action for that tick; paused reload/save/import bind both programs and world. |
+| E07 | Compatibility | Missing team extension leaves old worlds/checkpoints unchanged; solo mode preserves parked Drone 2 inventory/code. |
+| E08 | Verification | Shared clock, resource conservation, rotating pad priority, deadline deliveries, invalid checkpoints, HTTP resume, browser controls, and sustained all-option starter runs. |
+
+Exact implemented semantics: [DRONE_TEAMS.md](DRONE_TEAMS.md). The broader feature comparison and ranked proposals are in [DESIGN_DIRECTION.md](DESIGN_DIRECTION.md); those proposals are not implemented APIs.

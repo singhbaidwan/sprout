@@ -27,6 +27,7 @@ farm.js: responsive canvas world        POST /api/run → interpreter → Farm /
 | `farm/world.py` | Explicit scenario selection and validation; classic and factory state versions remain distinct. |
 | `farm/saves.py` | Portable envelopes, chapter/world matching, legacy migration. |
 | `static/factory-ui.js` | Catalog-driven machine dashboard, order status, factory inspection and guide. |
+| `farm/team.py` | Two-controller planning, shared-resource arbitration, one world tick, versioned team continuation. |
 | `farm/continuous.py` | Compile validated syntax to bounded instructions; one-action scheduling and typed portable continuations. |
 | `farm/interpreter.py` | Python AST validation, expression/statement interpretation, resource budgets, action frames, errors. |
 | `farm/server.py` | Explicit static asset allowlist and JSON endpoints, request/origin/host checks. |
@@ -96,6 +97,7 @@ All POST requests require `Content-Type: application/json`. Run/upgrade/order re
 | `POST /api/validate` | `{state}` | `{state}` rebuilt from known fields |
 | `POST /api/run` | `{state, code}` | `{frames, error, actions, operations}` |
 | `POST /api/controller/step` | `{state, code, checkpoint?}` | `{frames, state, checkpoint, revision, done, error, actions, operations}` |
+| `POST /api/team/step` | `{state, codes: [source1, source2], checkpoint?}` | `{state, checkpoint, revision, done, error, frames, actions, operations, drones}` |
 | `POST /api/unlock` | `{state, item}` | `{state, message}` |
 | `POST /api/settings` | `{state, settings}` with three booleans | `{state, message}`; change growing options without ticking |
 | `POST /api/order` | `{state}` in factory chapter | `{state, message}`; start/retry a timed order |
@@ -131,7 +133,7 @@ The item-conservation test compares wheat-equivalent quantities across cargo, ch
 
 Factory saves include cargo, chest, machine input/output/remaining, upgrades, additional production stats, six mission IDs, and order status/start tick/start delivered/best time/completed count. Known fields are rebuilt and bounds validated. Save validation is consistency checking for an editable local game, not server-authoritative anti-cheat.
 
-The UI stores an active chapter plus per-chapter state/code/speed. Chapter changes and order starts are disabled during request preparation or playback. Stop invalidates request tokens; late responses cannot overwrite a reset or a newer operation. Reset affects only the active chapter. Full frame snapshots are retained for this small fixed map; multiple drones and larger worlds require extending the single-controller scheduler with conflict resolution and one combined tick, as described in the roadmap.
+The UI stores an active chapter plus per-chapter state/code/speed. Chapter changes and order starts are disabled during request preparation or playback. Stop invalidates request tokens; late responses cannot overwrite a reset or a newer operation. Reset affects only the active chapter. Full frame snapshots are retained for this small fixed map; the optional two-drone extension uses conflict resolution and one combined tick. Larger worlds still require profiling before changing transport formats.
 
 ## Optional cultivation extension
 
@@ -144,3 +146,12 @@ Harvest handlers calculate sale/yield bonuses before the care harvest hook clear
 Configurations are validated as exactly three booleans and applied without ticking. Browser request tokens protect settings changes from late responses, and controls are disabled during playback. Toggling off does not remove inventory or equipment. Crop removal always clears its treatment. Expansion remaps the care grid and sprinkler indices with the same coordinate-preservation rule as crops.
 
 Shared examples query scenario and enabled features, illustrating independent systems without requiring imports or player access to host objects. Bounded-run limits and local-only hosting assumptions remain in effect; Continuous renews its work quota at each action as described above.
+
+
+## Two-drone execution
+
+`farm/team.py` subclasses the continuous VM to plan one action on each independent start-of-tick world view. The acting drone's position/cargo is projected into the existing API fields, so no player-visible host concurrency or new command namespace is needed. Action validation runs on isolated copies. A planning error returns the unchanged world for that tick.
+
+A `TickFactory` defers `advance()`. Alternating drone priority applies valid commands against shared state, reserving non-movement work tiles. Losers restore the pre-step continuation and re-evaluate queries next tick. Movement may cross because the two drones use separate air lanes. Only after resolution does `Farm.advance()` grow crops, advance machines, and resolve missions/orders once. Successful command totals are counted separately from world ticks. Output from a blocked speculative step is discarded to avoid duplicated print messages.
+
+The response carries one final world, labeled message frames and two continuation records; the browser commits them together and uses the existing request/revision guards. A combined digest binds both sources and the world, including finished controllers. Team continuations are at most 100 KB and preserve the per-controller limits. Versioned optional world/save extensions preserve old solo checkpoint digests; disabling team execution retains the second drone's inventory and program. Full schema and player-facing conflict rules: [DRONE_TEAMS.md](DRONE_TEAMS.md).

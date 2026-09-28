@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 from .engine import CROPS, MISSIONS, GameError, new_state
 from .interpreter import run_script
 from .continuous import step_script
+from .team import step_team
 from .saves import validate_save
 from . import cultivation
 from .world import create_game, validate_game
@@ -58,7 +59,7 @@ class GameHandler(BaseHTTPRequestHandler):
             examples = {name: (EXAMPLES / (filename + ".py")).read_text() for name, filename in {
                 "starter": "starter", "full_field": "full_field", "smart_farmer": "smart_farmer", "carrots": "carrots", "continuous": "continuous"
             }.items()}
-            factory_examples = {name: (EXAMPLES / f"factory_{name}.py").read_text() for name in ("starter", "harvest", "bakery", "orders", "continuous")}
+            factory_examples = {name: (EXAMPLES / f"factory_{name}.py").read_text() for name in ("starter", "harvest", "bakery", "orders", "continuous", "team_farmer", "team_courier")}
             care_examples = {name: (EXAMPLES / f"{name}.py").read_text() for name in ("crop_care", "irrigation")}
             examples.update(care_examples); factory_examples.update(care_examples)
             return self.respond(200, {"state": new_state(), "crops": CROPS, "missions": MISSIONS, "examples": examples,
@@ -77,7 +78,7 @@ class GameHandler(BaseHTTPRequestHandler):
         try:
             path = urlsplit(self.path).path
             length = int(self.headers.get("Content-Length", "0"))
-            limit = MAX_SAVE_BODY if path in ("/api/save/validate", "/api/controller/step") else MAX_BODY
+            limit = MAX_SAVE_BODY if path in ("/api/save/validate", "/api/controller/step", "/api/team/step") else MAX_BODY
             if not 0 < length <= limit:
                 return self.respond(413, {"error": f"Request must be between 1 and {limit:,} bytes."})
             payload = json.loads(self.rfile.read(length))
@@ -90,6 +91,9 @@ class GameHandler(BaseHTTPRequestHandler):
             if path == "/api/controller/step":
                 state = validate_game(payload.get("state"))
                 return self.respond(200, step_script(payload.get("code"), state, payload.get("checkpoint")))
+            if path == "/api/team/step":
+                state = validate_game(payload.get("state"))
+                return self.respond(200, step_team(payload.get("codes"), state, payload.get("checkpoint")))
             if path == "/api/run":
                 state = validate_game(payload.get("state"))
                 return self.respond(200, run_script(payload.get("code"), state))

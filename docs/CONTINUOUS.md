@@ -69,4 +69,9 @@ The two interpreters count internal operations differently; the quotas are work 
 
 Responses increment the incoming revision once. The browser permits one current request, checks its request token and expected revision, and commits the response atomically before requesting another. Retrying identical inputs yields identical results. This is ordered single-client execution, not a server-authoritative shared session. Full snapshots are retained because the map is small.
 
-The scheduler currently serves one drone. Multiple controllers will need action reservation, conflict resolution, fairness, and one world advance after the combined tick; calling today's single-drone action method once per drone would incorrectly accelerate the world. That work belongs to Stage 4.
+The original continuous scheduler serves one drone. The implemented team extension adds action reservation, alternating priority and one world advance after a combined tick. It defers individual action ticking so adding a drone does not accelerate growth or machines. See the team section below.
+
+
+## Optional team mode
+
+Breadworks also offers **Drone team (2)**. It reuses these bounded VM continuations, one per drone, with a separate shared-tick scheduler. One team Step can perform two commands while advancing the world only once. Both programs save together and reload paused. See [DRONE_TEAMS.md](DRONE_TEAMS.md) for the implemented endpoint, schema, arbitration and solo compatibility rules.

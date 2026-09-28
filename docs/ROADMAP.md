@@ -45,19 +45,19 @@ The game now poses several distinct problems: a full drone cannot harvest; a ful
 
 | Stage | Deliverable | Completion check |
 | --- | --- | --- |
-| 4 — Logistics and building | A second drone, movement conflicts, placeable machines, limited-capacity conveyors, saved routes. | Controllers cooperate without duplicate items, permanent starvation, or double-speed world time. Blueprints preserve validated layouts. |
+| 4 — Logistics and building | Two-drone team delivered; next consider efficiency scenarios, placeable machines, limited-capacity conveyors and saved routes. Physical movement conflicts are optional future scope. | Controllers cooperate without duplicate items, permanent starvation, or double-speed world time. Blueprints preserve validated layouts. |
 | 5 — Deeper production | Power, research, additional byproduct recipes, multiple recipes, varied contracts, throughput and idle-time graphs. | Players can see a bottleneck, change code, and measure improved output. |
 | 6 — Scale and sharing | Larger maps, script/blueprint sharing, performance profiling, then optional accounts and hosting. | Representative worlds meet performance budgets; public execution has an isolated deployment design. |
 
 These are independent milestones requiring scope decisions, rather than a promise to implement everything in sequence immediately. Completed authorized milestones are verified, documented, committed, and pushed before the next begins.
 
-## Multi-controller simulation design — future extension
+## Multi-controller simulation design — implemented for two drones
 
-The present game supports bounded playback and a resumable single-drone controller, sharing the existing one-action world clock. Several simultaneous controllers will need to extend that boundary:
+The present game supports bounded playback, resumable solo control, and an optional two-drone Breadworks team. The team extends the original one-action clock as follows:
 
 1. Read the world at the start of the tick.
 2. Resume each controller with a bounded instruction quota until it yields an action, finishes, or faults.
-3. Resolve movement and transfers in a documented deterministic order. Reserve shared items so two drones cannot take the last item.
+3. Resolve actions in alternating drone priority. Reserve shared work pads and apply transfers atomically so two drones cannot take the last item. Drones fly in separate air lanes and may cross paths.
 4. Advance crops, machines, and transport **once**. Define whether new outputs can move this tick or next; avoid accidentally traversing an entire belt in one tick.
 5. Record events, controller frames, a new world revision, and an ordered update batch.
 
@@ -65,13 +65,13 @@ Use deterministic rotating priority for contested actions. Pause freezes the sha
 
 Keep the existing 400-action bounded mode and the explicit continuous execution frames with per-step budgets. Do not introduce unrestricted host-Python threads. Preserve the named-call API and the ban on arbitrary attributes/imports unless a narrowly scoped language extension is designed and tested.
 
-The current browser checks request tokens and checkpoint revisions, and checkpoints world and controller together. A future shared server session must also reject stale mutations authoritatively. Ordered deltas with periodic snapshots can replace full frames after profiling; no framework rewrite is needed merely to add these mechanics.
+The current browser checks request tokens and checkpoint revisions, and checkpoints world and controller together. The team binds both sources and world in one checkpoint. A future shared server session must also reject stale mutations authoritatively. Ordered deltas with periodic snapshots can replace full frames after profiling; no framework rewrite is needed merely to add these mechanics.
 
 ## Save compatibility
 
 The version 2 portable envelope already holds independent chapter saves. Classic worlds remain version 1; Breadworks worlds use version 2 with an explicit scenario, inventories, machine progress, upgrades, and order state. Legacy single-farm envelopes migrate into classic mode.
 
-Future schemas must explicitly migrate existing chapters, including ingredients already consumed by active batches. Continuous controllers now have versioned execution frames and paused reload behavior; old saves default to finite mode. Add migration fixtures before changing storage and retain a recoverable backup.
+The optional team extension preserves old saves and checkpoints; see [DRONE_TEAMS.md](DRONE_TEAMS.md). Future schemas must explicitly migrate existing chapters, including ingredients already consumed by active batches. Continuous controllers now have versioned execution frames and paused reload behavior; old saves default to finite mode. Add migration fixtures before changing storage and retain a recoverable backup.
 
 Classic harvests sell immediately and classic scripts assume wrapped edges. Keep those semantics scoped to Home farm. Factory APIs and map rules must never silently reinterpret classic saves or tutorials.
 
@@ -91,3 +91,8 @@ Other useful work: collect balancing feedback, improve editor diagnostics, add a
 Following the owner's reference to [The Farmer Was Replaced](https://store.steampowered.com/app/2060160/The_Farmer_Was_Replaced/), Sprout now lets players opt into deeper resource and maintenance loops. The store's stated emphasis on gradual programming progression and resource-funded technology informs this direction. Fertilizer, irrigation, and soil care are implemented in Sprout with its own rules, rather than inferred as exact mechanics of the reference.
 
 Future configurable modules could add weather, pests, crop rotation bonuses, and diseases. Each would need an explicit off-state behavior, bounded automation API, visible diagnosis, migration, and runnable example. None of those additional modules is included in the present crop-care release.
+
+
+## Current design recommendation
+
+The two-drone team is implemented. Factorio / The Farmer Was Replaced research and a ranked proposal list are in [DESIGN_DIRECTION.md](DESIGN_DIRECTION.md). The recommended next bounded milestone is a measurable efficiency dashboard plus reproducible village contract scenarios, followed by a conserved byproduct chain. These proposals require a separate scope decision; they are not shipped features or callable APIs.

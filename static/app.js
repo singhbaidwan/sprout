@@ -8,7 +8,9 @@ const editor = $('code-editor');
 let state, crops, missions, examples, initialState, chapters, catalog, careRules;
 const isFactory = () => state?.scenario === 'factory';
 let checkpoint = null, stepping = false;
-const continuous = () => $('execution-select').value === 'continuous';
+const teamMode = () => $('execution-select').value === 'team';
+const continuous = () => ['continuous', 'team'].includes($('execution-select').value);
+let primaryCode = '', teamCode = 'while True:\n    wait()', activeDrone = 0, droneStatuses = [];
 let mode = 'loading', queue = [], queueIndex = 0, resultError = null;
 let timer = null, toastTimer = null, saveTimer = null, requestToken = 0, controller = null;
 let currentLine = null, errorLine = null, selected = null, logs = 0;
@@ -53,13 +55,43 @@ function log(message, kind = 'info', line = null) {
 
 function save() {
   if (!state) return;
-  saveData.games[saveData.active] = { state, code: editor.value, speed: $('speed-select').value, execution: $('execution-select').value, ...(checkpoint ? { checkpoint } : {}) };
+  rememberCode();
+  saveData.games[saveData.active] = { state, code: primaryCode, ...(isFactory() ? {team_code: teamCode} : {}), speed: $('speed-select').value, execution: $('execution-select').value, ...(checkpoint ? { checkpoint } : {}) };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
     $('save-status').textContent = 'Saved on this device';
   } catch {
     $('save-status').textContent = 'Saving unavailable';
     if (storageAvailable) { storageAvailable = false; toast('Browser storage is unavailable. This farm will last for this tab only.', true); }
+  }
+}
+
+function rememberCode() {
+  if (activeDrone === 0) primaryCode = editor.value;
+  else teamCode = editor.value;
+}
+
+function showDrone(drone) {
+  rememberCode(); activeDrone = drone;
+  $('drone-select').value = String(drone);
+  setCode(drone === 0 ? primaryCode : teamCode);
+  currentLine = teamMode() ? checkpoint?.controllers?.[drone]?.checkpoint?.line || null : checkpoint?.line || null;
+  updateLines();
+}
+
+function updateTeam() {
+  $('team-controls').hidden = !isFactory() || !teamMode();
+  $('team-panel').hidden = !isFactory() || (!teamMode() && !state?.team);
+  if (!isFactory()) return;
+  const capacity = state.upgrades.includes('cargo') ? 16 : 8;
+  for (let drone = 0; drone < 2; drone++) {
+    const data = drone ? state.team : state;
+    const position = data?.drone || {x: 0, y: 6};
+    const cargo = data?.cargo || {wheat: 0, flour: 0, bread: 0};
+    $(`team-drone-${drone}`).textContent = `(${position.x}, ${position.y}) · ${Object.values(cargo).reduce((a,b) => a+b,0)} / ${capacity} cargo`;
+    $(`team-stock-${drone}`).textContent = `${cargo.wheat} wheat · ${cargo.flour} flour · ${cargo.bread} bread`;
+    const status = !teamMode() ? (drone ? 'Parked · cargo kept' : 'Solo program') : mode === 'running' ? droneStatuses[drone]?.status || 'Working' : checkpoint?.controllers?.[drone]?.done ? 'Finished' : mode === 'paused' ? 'Paused' : 'Ready';
+    $(`team-status-${drone}`).textContent = `${status} · ${state.team?.actions[drone] || 0} actions · ${state.team?.blocked[drone] || 0} blocked`;
   }
 }
 
@@ -113,7 +145,8 @@ function setMode(next, label) {
   editor.readOnly = busy;
   $('example-select').disabled = busy;
   $('execution-select').disabled = busy;
-  $('execution-help').textContent = continuous() ? 'Keeps its place between actions. Reload restores it paused. Stop lets you edit.' : 'Runs up to 400 actions. Choose Continuous for long-running loops.';
+  $('team-starter').disabled = busy;
+  $('execution-help').textContent = teamMode() ? 'Two Python programs. Step advances both drones by one shared tick. Stop to edit.' : continuous() ? 'Keeps its place between actions. Reload restores it paused. Stop lets you edit.' : 'Runs up to 400 actions. Choose Continuous for long-running loops.';
   $('run-button').disabled = mode === 'loading' || !state;
   $('run-label').textContent = mode === 'running' ? 'Pause' : mode === 'paused' ? 'Resume' : mode === 'loading' ? 'Preparing…' : 'Run code';
   $('run-symbol').textContent = mode === 'running' ? 'Ⅱ' : '▶';
@@ -128,7 +161,7 @@ function setMode(next, label) {
   $('runtime-status').textContent = label || ({ idle: 'Ready when you are', paused: 'Paused · step or resume', running: 'Program running', loading: 'Preparing your program', error: 'Check your program' }[mode]);
   $('runtime-dot').className = `status-dot ${mode === 'running' ? 'running' : mode === 'error' ? 'error' : ''}`;
   $('field-status').textContent = mode === 'running' ? 'Drone working' : mode === 'paused' ? 'Drone paused' : 'Drone ready';
-  if (state) updateUpgrades();
+  if (state) { updateUpgrades(); updateTeam(); }
 }
 
 function updateState(next, action = null) {
@@ -139,6 +172,7 @@ function updateState(next, action = null) {
   $('field-size').textContent = `${state.size} × ${state.size}`;
   $('drone-position').textContent = `x: ${state.drone.x}   y: ${state.drone.y}`;
   renderer.update(state, action);
+  updateTeam();
   updateInspector(); updateMission(); updateUpgrades();
   if (isFactory()) updateFactory(state, catalog, ['running', 'paused', 'loading'].includes(mode));
   updateCare(state, careRules, ['running', 'paused', 'loading'].includes(mode));
@@ -232,7 +266,8 @@ async function prepare(singleStep = false) {
   if (continuous()) {
     checkpoint = null; currentLine = errorLine = null; updateLines();
     setMode(singleStep ? 'paused' : 'running');
-    log('Continuous controller started. Each completed action is saved.');
+    rememberCode(); droneStatuses = [];
+    log(teamMode() ? 'Drone team started. Both programs share one world clock.' : 'Continuous controller started. Each completed action is saved.');
     continuousStep(); return;
   }
   const token = ++requestToken;
@@ -254,7 +289,7 @@ async function prepare(singleStep = false) {
 }
 
 function applyFrame(frame) {
-  currentLine = frame.line; updateLines();
+  if (!teamMode() || frame.drone === activeDrone) { currentLine = frame.line; updateLines(); }
   if (frame.state) {
     updateState(frame.state, frame.action); save();
     $('action-status').textContent = frame.message;
@@ -267,6 +302,7 @@ function finish() {
   clearTimeout(timer); timer = null;
   currentLine = null;
   if (resultError) {
+    if (teamMode() && resultError.drone !== undefined) showDrone(resultError.drone);
     errorLine = resultError.line;
     log(`${resultError.line ? `Line ${resultError.line}: ` : ''}${resultError.message}`, 'error');
     setMode('error', resultError.line ? `Error on line ${resultError.line}` : 'Check your program');
@@ -301,14 +337,16 @@ async function continuousStep() {
   const expectedRevision = (checkpoint?.revision || 0) + 1;
   controller = new AbortController(); stepping = true; setMode(mode);
   try {
-    const result = await api('controller/step', { state, code: editor.value, checkpoint }, controller.signal);
+    rememberCode();
+    const result = await api(teamMode() ? 'team/step' : 'controller/step', teamMode() ? {state, codes: [primaryCode, teamCode], checkpoint} : { state, code: editor.value, checkpoint }, controller.signal);
     if (token !== requestToken) return;
     if (result.revision !== expectedRevision) throw new Error('Controller update arrived out of order. Stop to restart it.');
     // Commit world and continuation together before any save or next request.
     checkpoint = result.checkpoint;
+    if (teamMode()) { droneStatuses = result.drones; updateState(result.state); $('action-status').textContent = `Team tick ${state.tick} · ${result.actions} actions`; }
     for (const frame of result.frames) applyFrame(frame);
     if (result.done) { resultError = result.error; finish(); }
-    else { save(); setMode(mode, `${mode === 'paused' ? 'Paused' : 'Continuous'} · tick ${state.tick}`); }
+    else { save(); setMode(mode, `${mode === 'paused' ? 'Paused' : teamMode() ? 'Drone team' : 'Continuous'} · tick ${state.tick}`); }
   } catch (error) {
     if (token !== requestToken) return;
     setMode('paused', error.status === 400 ? 'Controller cannot resume · Stop to restart' : 'Connection interrupted · retry Resume or Stop');
@@ -338,7 +376,7 @@ function openGuide(tab = 'learn') {
 
 function renderGuide(tab) {
   document.querySelectorAll('.guide-tab').forEach(button => button.classList.toggle('active', button.dataset.guide === tab));
-  if (tab === 'automation') { $('guide-content').innerHTML = `<h3>A factory that keeps running</h3><p>Choose <strong>Continuous</strong> above the editor or load <strong>Continuous autopilot</strong>. Your script can use <code>while True:</code> to tend crops and keep machines supplied. A finite script still finishes normally.</p><pre>while True:\n    if can_harvest():\n        harvest()\n    else:\n        wait()</pre><p><strong>Pause</strong> freezes the farm at the last displayed action. <strong>Step</strong> completes at most one action, including one tile of a route. <strong>Resume</strong> continues from the saved variables and function calls. <strong>Stop</strong> keeps farm progress and clears the controller so you can edit, switch chapters, or change growing options.</p><p>World and program position save together after each action. Reloads and imported saves restore paused; nothing runs while the page is closed. Speed changes real-world pacing only. Crops, irrigation, machines, and delivery deadlines share one action clock.</p><p>Continuous mode allows 20,000 interpreter operations and 100 printed messages between actions, with 48 KB of controller memory. An infinite loop must perform an action such as <code>wait()</code>. Bounded run retains its 400-action limit. Imports, attributes, files, and unrestricted Python remain unavailable.</p>`; return; }
+  if (tab === 'automation') { $('guide-content').innerHTML = `<h3>A factory that keeps running</h3><p>Choose <strong>Continuous</strong> above the editor or load <strong>Continuous autopilot</strong>. Your script can use <code>while True:</code> to tend crops and keep machines supplied. A finite script still finishes normally.</p><pre>while True:\n    if can_harvest():\n        harvest()\n    else:\n        wait()</pre><p><strong>Pause</strong> freezes the farm at the last displayed action. <strong>Step</strong> completes at most one action, including one tile of a route. <strong>Resume</strong> continues from the saved variables and function calls. <strong>Stop</strong> keeps farm progress and clears the controller so you can edit, switch chapters, or change growing options.</p><p>World and program position save together after each action. Reloads and imported saves restore paused; nothing runs while the page is closed. Speed changes real-world pacing only. Crops, irrigation, machines, and delivery deadlines share one action clock.</p><h3>Drone team · Breadworks</h3><p>Choose <strong>Drone team (2)</strong> and <strong>Load team starter</strong>. Switch between Drone 1 and Drone 2 to edit their separate programs. Existing commands act on that program’s drone; cargo is separate, while coins, care supplies, storage and machines are shared. One Step gives each drone up to one action, then advances the world once. Shared pads and crop work take turns. Drones fly in separate air lanes, so paths may cross. The second drone parks with its cargo when you return to solo mode.</p><p>Observe shared inventories immediately before transferring. A contested action retries with fresh queries; an invalid command stops both programs. Both programs and their positions save together and restore paused.</p><p>Continuous mode allows 20,000 interpreter operations and 100 printed messages between actions, with 48 KB of controller memory. An infinite loop must perform an action such as <code>wait()</code>. Bounded run retains its 400-action limit. Imports, attributes, files, and unrestricted Python remain unavailable.</p>`; return; }
   if (tab === 'care') { $('guide-content').innerHTML = cultivationGuide(); return; }
   if (isFactory()) { $('guide-content').innerHTML = factoryGuide(tab, catalog, missions); return; }
   const content = {
@@ -373,12 +411,18 @@ $('run-button').addEventListener('click', runOrPause);
 $('step-button').addEventListener('click', () => mode === 'paused' ? advanceOne() : prepare(true));
 $('stop-button').addEventListener('click', () => stop());
 $('speed-select').addEventListener('change', save);
-$('execution-select').addEventListener('change', () => { setMode('idle'); save(); });
+$('execution-select').addEventListener('change', () => { if (!teamMode()) showDrone(0); setMode('idle'); save(); });
+$('drone-select').addEventListener('change', event => { showDrone(Number(event.target.value)); save(); });
+$('team-starter').addEventListener('click', () => {
+  primaryCode = examples.team_farmer; teamCode = examples.team_courier;
+  activeDrone = 0; $('drone-select').value = '0'; setCode(primaryCode);
+  setMode('idle'); save(); log('Team starter loaded: Drone 1 grows and stores wheat; Drone 2 mills, bakes, and delivers.');
+});
 $('latest-log').addEventListener('click', () => { $('console').scrollTop = $('console').scrollHeight; });
 $('clear-log').addEventListener('click', () => { $('console').replaceChildren(); logs = 0; $('log-count').textContent = '0'; });
 $('example-select').addEventListener('change', event => {
   const value = event.target.value;
-  if (examples?.[value]) { if (value === 'continuous') $('execution-select').value = 'continuous'; setCode(examples[value]); setMode('idle'); save(); log('Example loaded. It will run from your current farm state.'); toast('Example loaded. Make it your own.'); }
+  if (examples?.[value]) { if (value === 'continuous') { showDrone(0); $('execution-select').value = 'continuous'; } if (value.startsWith('team_')) { $('execution-select').value = 'team'; showDrone(value === 'team_farmer' ? 0 : 1); } setCode(examples[value]); setMode('idle'); save(); log('Example loaded. It will run from your current farm state.'); toast('Example loaded. Make it your own.'); }
   event.target.value = '';
 });
 
@@ -460,7 +504,7 @@ $('reset-open').addEventListener('click', () => $('reset-dialog').showModal());
 $('reset-footer').addEventListener('click', () => $('reset-dialog').showModal());
 $('reset-confirm').addEventListener('click', () => {
   stop(true); selected = null; renderer.selected = null;
-  $('execution-select').value = 'finite';
+  $('execution-select').value = 'finite'; activeDrone = 0; teamCode = 'while True:\n    wait()'; droneStatuses = [];
   updateState(structuredClone(initialState)); setCode(examples.starter); setMode('idle');
   $('action-status').textContent = 'Ready for your first command';
   $('console').replaceChildren(); logs = 0;
@@ -493,14 +537,16 @@ function activateChapter(name, game) {
   $('guide-title').textContent = factory ? 'The path from grain to bread.' : 'A small guide to big harvests.';
   document.querySelector('[data-guide="crops"]').textContent = factory ? 'Recipes & missions' : 'Crops & missions';
   const labels = factory ? {starter: 'First bread', harvest: 'Harvest & store', bakery: 'Farm to bakery', orders: 'Order runner'} : {starter: 'Your first row', full_field: 'The whole field', smart_farmer: 'Harvest & replant', carrots: 'A carrot patch'};
-  Object.assign(labels, {continuous: 'Continuous autopilot', crop_care: 'Smart crop care', irrigation: 'Sprinkler network'});
+  Object.assign(labels, {team_farmer: 'Team: farmer', team_courier: 'Team: courier', continuous: 'Continuous autopilot', crop_care: 'Smart crop care', irrigation: 'Sprinkler network'});
   $('example-select').innerHTML = '<option value="">Load example</option>' + Object.keys(examples).map(key => `<option value="${key}">${labels[key]}</option>`).join('');
-  createUpgrades(); setCode(game.code); $('speed-select').value = game.speed;
+  $('execution-select').querySelector('[value=team]').disabled = !factory;
+  primaryCode = game.code; teamCode = game.team_code || 'while True:\n    wait()'; activeDrone = 0; droneStatuses = []; $('drone-select').value = '0';
+  createUpgrades(); setCode(primaryCode); $('speed-select').value = game.speed;
   checkpoint = game.checkpoint || null;
   $('execution-select').value = game.execution || 'finite';
   updateState(game.state);
   $('action-status').textContent = checkpoint ? 'Saved controller · ready to resume' : 'Ready for your next command';
-  currentLine = checkpoint?.line || null; updateLines();
+  currentLine = teamMode() ? checkpoint?.controllers?.[0]?.checkpoint?.line || null : checkpoint?.line || null; updateLines();
   setMode(checkpoint ? 'paused' : 'idle', checkpoint ? 'Checkpoint restored · Resume or Step' : undefined);
 }
 

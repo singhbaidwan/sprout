@@ -7,6 +7,7 @@ export class FarmRenderer {
     this.selected = null;
     this.state = null;
     this.drone = { x: 0, y: 0 };
+    this.secondDrone = {x: 0, y: 6};
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)');
     this.last = 0;
     this.effect = null;
@@ -34,11 +35,12 @@ export class FarmRenderer {
   }
   update(state, action = null) {
     const first = !this.state;
+    if (state.team && (!this.state?.team || this.reduced.matches)) this.secondDrone = {...state.team.drone};
     this.state = state;
     this.layout();
     if (first || this.reduced.matches || Math.abs(this.drone.x - state.drone.x) > 2 || Math.abs(this.drone.y - state.drone.y) > 2) this.drone = { ...state.drone };
     if (action === 'harvest' || action === 'water' || action === 'plant') this.effect = { action, x: state.drone.x, y: state.drone.y, start: performance.now() };
-    this.canvas.setAttribute('aria-label', `${state.scenario === 'factory' ? 'Breadworks with chest, mill, oven, and delivery depot. ' : ''}${state.size} by ${state.size} farm. Drone at ${state.drone.x}, ${state.drone.y}. ${state.stats.harvested} crops harvested. Use Inspect plots for details.`);
+    this.canvas.setAttribute('aria-label', `${state.scenario === 'factory' ? 'Breadworks with chest, mill, oven, and delivery depot. ' : ''}${state.size} by ${state.size} farm. Drone at ${state.drone.x}, ${state.drone.y}. ${state.stats.harvested} crops harvested. ${state.team ? `Drone 2 at ${state.team.drone.x}, ${state.team.drone.y}. ` : ''}Use Inspect plots for details.`);
     this.draw(performance.now());
   }
   point(x, y) { return { x: this.originX + (x - y) * this.unit, y: this.originY + (x + y) * this.half }; }
@@ -226,12 +228,17 @@ export class FarmRenderer {
     // Coordinate markers along the two near field edges.
     c.font = `${Math.max(9, Math.min(11, u*.35))}px ui-monospace, monospace`; c.fillStyle = '#92a177'; c.textAlign = 'center';
     for(let i=0;i<n;i++) { const a=this.point(n+.36,i+.5), b=this.point(i+.5,n+.4); c.fillText(String(i),a.x,a.y+4); c.fillText(String(i),b.x,b.y+4); }
-    const p = this.point(this.drone.x + .5, this.drone.y + .5);
+    this.drawDrone(time, this.drone, false);
+    if (s.team) this.drawDrone(time, this.secondDrone, true);
+  }
+  drawDrone(time, drone, second) {
+    const c = this.ctx, u = this.unit;
+    const p = this.point(drone.x + .5, drone.y + .5);
     const ds = Math.max(.66, Math.min(u/28,1.25));
     const bob = this.reduced.matches ? 0 : Math.sin(time/450)*1.5;
     this.ellipse(p.x+2,p.y+4,15*ds,6*ds,'#3e54252b');
-    const dy = p.y-31*ds+bob;
-    if (this.effect && time-this.effect.start < 600 && !this.reduced.matches) {
+    const dy = p.y-(second ? 49 : 31)*ds+bob;
+    if (!second && this.effect && time-this.effect.start < 600 && !this.reduced.matches) {
       const t=(time-this.effect.start)/600, e=this.point(this.effect.x+.5,this.effect.y+.5);
       for(let i=0;i<7;i++) {const angle=i/7*Math.PI*2;this.ellipse(e.x+Math.cos(angle)*t*28*ds,e.y-10+Math.sin(angle)*t*12*ds-t*15,2*(1-t)*ds,2*(1-t)*ds,this.effect.action==='water'?'#7faebe':'#e9d27a');}
     }
@@ -242,15 +249,20 @@ export class FarmRenderer {
       const angle=this.reduced.matches?.3:time/35+dx;
       this.line(p.x+dx*ds-Math.cos(angle)*8*ds,dy+oy*ds-Math.sin(angle)*3*ds,p.x+dx*ds+Math.cos(angle)*8*ds,dy+oy*ds+Math.sin(angle)*3*ds,'#9cafa0',1.7*ds);
     }
-    this.polygon([[p.x-9*ds,dy-9*ds],[p.x+8*ds,dy-9*ds],[p.x+11*ds,dy+3*ds],[p.x+5*ds,dy+9*ds],[p.x-9*ds,dy+6*ds]],'#e9eee0','#6d8272');
-    this.polygon([[p.x-5*ds,dy-5*ds],[p.x+5*ds,dy-5*ds],[p.x+6*ds,dy+1*ds],[p.x-5*ds,dy+1*ds]],'#91a893');
+    this.polygon([[p.x-9*ds,dy-9*ds],[p.x+8*ds,dy-9*ds],[p.x+11*ds,dy+3*ds],[p.x+5*ds,dy+9*ds],[p.x-9*ds,dy+6*ds]],second ? '#d4e8f1' : '#e9eee0',second ? '#467e99' : '#6d8272');
+    this.polygon([[p.x-5*ds,dy-5*ds],[p.x+5*ds,dy-5*ds],[p.x+6*ds,dy+1*ds],[p.x-5*ds,dy+1*ds]],second ? '#6caac7' : '#91a893');
     this.ellipse(p.x,dy+5*ds,2*ds,1.6*ds,'#e5c660');
+    if (this.state.team) { c.font = 'bold 10px ui-monospace, monospace'; c.textAlign = 'center'; c.fillStyle = second ? '#245d7b' : '#3d5c33'; c.fillText(second ? '2' : '1', p.x, dy-15*ds); }
   }
   animate(time) {
     if (this.state && time - this.last > 32 && !document.hidden) {
       const factor = this.reduced.matches ? 1 : .22;
       this.drone.x += (this.state.drone.x - this.drone.x) * factor;
       this.drone.y += (this.state.drone.y - this.drone.y) * factor;
+      if (this.state.team) {
+        this.secondDrone.x += (this.state.team.drone.x - this.secondDrone.x) * factor;
+        this.secondDrone.y += (this.state.team.drone.y - this.secondDrone.y) * factor;
+      }
       this.draw(time); this.last = time;
     }
     requestAnimationFrame(next => this.animate(next));

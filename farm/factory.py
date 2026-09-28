@@ -1,4 +1,4 @@
-"""Breadworks: finite, single-drone logistics on a deterministic world clock."""
+"""Breadworks logistics on a deterministic world clock."""
 
 from collections import deque
 
@@ -81,6 +81,20 @@ def validate_factory(raw):
             state[key] = {item: integer(raw[key][item], 0, capacity, key) for item in ITEMS}
             if sum(state[key].values()) > capacity:
                 raise GameError(f"Saved {key} exceeds its capacity.")
+        # Optional extension: old worlds and controller digests stay unchanged.
+        if "team" in raw:
+            team = raw["team"]
+            if not isinstance(team, dict) or type(team.get("version")) is not int or team["version"] != 1:
+                raise GameError("Invalid drone team version.")
+            drone = {axis: integer(team["drone"][axis], 0, 7, "second drone position") for axis in ("x", "y")}
+            cargo = {item: integer(team["cargo"][item], 0, 16, "second drone cargo") for item in ITEMS}
+            if not walkable(**drone) or sum(cargo.values()) > (16 if "cargo" in upgrades else 8):
+                raise GameError("The second drone has an invalid position or cargo capacity.")
+            state["team"] = {"version": 1, "drone": drone, "cargo": cargo}
+            for key in ("actions", "blocked"):
+                if not isinstance(team[key], list) or len(team[key]) != 2:
+                    raise GameError("Invalid drone team counters.")
+                state["team"][key] = [integer(value, 0, 10**9, key) for value in team[key]]
         state["machines"] = {}
         for name in ("mill", "oven"):
             machine, definition = raw["machines"][name], ENTITIES[name]

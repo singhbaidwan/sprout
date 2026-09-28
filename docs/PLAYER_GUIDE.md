@@ -211,3 +211,10 @@ Load **Continuous autopilot** to select Continuous mode and start a repeating si
 `store_cargo()` is defined inside **Harvest & store**; it is not a built-in API. Copy its `def store_cargo():` block along with `tend_field()` and the final `tend_field()` call. Load the complete example if your edited copy is missing those helpers. A full chest exits the routine safely; process inventory before harvesting again.
 
 The activity log keeps its latest 150 entries in a fixed-height scroll area. Long output wraps inside the panel. Scroll up to read earlier entries without being pulled back down; **Latest ↓** returns to live updates. The log can receive keyboard focus for scrolling.
+
+
+## Cooperating drones
+
+Breadworks now offers **Drone team (2)** in the Run mode menu. Click **Load team starter** to fill both programs with a farmer/courier pair, then Run code. The **Editing** selector switches between programs; Pause/Resume/Step control the whole team. Stop before editing. Each Step advances both drones by at most one action and the world by one tick.
+
+Both drones share the farm's stores and machines but have separate cargo. The blue Drone 2 parks with its cargo when you return to a solo mode. Existing saves continue to work; team saves restore paused. Details and examples: [DRONE_TEAMS.md](DRONE_TEAMS.md).

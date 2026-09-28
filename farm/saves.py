@@ -3,6 +3,7 @@
 from .engine import GameError
 from .world import validate_game
 from .continuous import validate_checkpoint
+from .team import validate_team_checkpoint
 
 
 def validate_save(raw):
@@ -32,12 +33,22 @@ def validate_save(raw):
             raise GameError("The saved world does not match its chapter.")
         clean["games"][name] = {"state": state, "code": code, "speed": speed}
         execution = game.get("execution", "finite")
-        if type(execution) is not str or execution not in ("finite", "continuous"):
+        if type(execution) is not str or execution not in ("finite", "continuous", "team"):
             raise GameError("Invalid controller mode in this save.")
+        if execution == "team" and name != "factory":
+            raise GameError("Drone teams belong to the Breadworks chapter.")
+        team_code = game.get("team_code", "while True:\n    wait()")
+        if type(team_code) is not str or len(team_code) > 16000:
+            raise GameError("The second drone program must be under 16,000 characters.")
+        if "team_code" in game:
+            clean["games"][name]["team_code"] = team_code
         if "execution" in game:
             clean["games"][name]["execution"] = execution
         if game.get("checkpoint") is not None:
-            if execution != "continuous":
+            if execution == "team":
+                clean["games"][name]["checkpoint"] = validate_team_checkpoint([code, team_code], state, game["checkpoint"])
+            elif execution != "continuous":
                 raise GameError("A checkpoint requires continuous mode.")
-            clean["games"][name]["checkpoint"] = validate_checkpoint(code, state, game["checkpoint"])
+            else:
+                clean["games"][name]["checkpoint"] = validate_checkpoint(code, state, game["checkpoint"])
     return clean

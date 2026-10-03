@@ -218,3 +218,12 @@ The activity log keeps its latest 150 entries in a fixed-height scroll area. Lon
 Breadworks now offers **Drone team (2)** in the Run mode menu. Click **Load team starter** to fill both programs with a farmer/courier pair, then Run code. The **Editing** selector switches between programs; Pause/Resume/Step control the whole team. Stop before editing. Each Step advances both drones by at most one action and the world by one tick.
 
 Both drones share the farm's stores and machines but have separate cargo. The blue Drone 2 parks with its cargo when you return to a solo mode. Existing saves continue to work; team saves restore paused. Details and examples: [DRONE_TEAMS.md](DRONE_TEAMS.md).
+
+
+## Automation challenges and performance
+
+Breadworks now includes three reproducible scenarios: **Bakery Rush**, **Waterwise Harvest**, and **Full Buffers**. Stop your campaign program, choose the scenario/team size, and press **Start challenge**. A separate farm and starter code appear. Your campaign is saved. Contracts stop automatically when completed or when their tick/water budget is exceeded.
+
+Run the starter, inspect **Efficiency dashboard**, Stop to edit, then **Retry with my code**. Shorten empty routes, keep machine inputs stocked, collect products before buffers fill, and spend irrigation on crops that still need growth. One or two drones share the same clock. Use Continuous for Waterwise's 500-tick budget. Personal records separate team sizes and show changes between consecutive completed attempts.
+
+**Return to farm** restores your campaign; **View saved attempt** reopens the last trial. Stop first if its controller is paused or running. Reload/import restore trial controllers paused and completed results remain recorded once. **Restart measurement** resets only the campaign dashboard window, between programs. [Full rules, limits and starter results](CHALLENGES.md).

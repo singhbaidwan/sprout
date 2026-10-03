@@ -1,6 +1,6 @@
 # Making Sprout deeper and distinctive
 
-Research reviewed 2026-09-20. These are design recommendations, not a claim to have played the reference games. Only the features explicitly marked implemented below exist in Sprout; the proposals do not add Python APIs yet.
+Research reviewed 2026-09-20; implementation status updated 2026-10-03. These are design recommendations, not a claim to have played the reference games. Only the features explicitly marked implemented below exist in Sprout; the proposals do not add Python APIs yet.
 
 ## Lessons from the references
 
@@ -22,7 +22,7 @@ The proposed differentiator is the interaction between ecology and factory sched
 | Priority | Proposal | Player decision and example challenge | Completion criterion |
 | --- | --- | --- | --- |
 | Implemented now | Optional two-drone team | Assign farming and courier roles, observe cargo congestion, keep the bakery supplied. | Independent programs and cargo, one world clock, conflict handling, paused saves, all growing-option combinations tested. |
-| Next: feedback and challenges | Efficiency dashboard and reproducible contract scenarios | Deliver 24 loaves in a fixed tick budget; then improve water per loaf, machine idle time, and empty travel. | Fixed starting snapshot, visible before/after score, personal records separated by rule preset and drone count. |
+| Implemented now | Efficiency dashboard and three reproducible contract scenarios | Deliver 24 loaves in a fixed tick budget; then improve water per loaf, machine idle time, and empty travel. | Fixed starting snapshot, visible before/after score, personal records separated by rule preset and drone count. |
 | Next: production choices | Residue → compost → fertilizer, or biomass → fuel | Decide whether the next harvest or the machines need the byproduct more. | Conserved items, bounded machine buffers, at least two useful production strategies, no forced grind. Existing simple compost remains the easy preset. |
 | Next: buildable logistics | Place machines, short conveyors, storage targets, reusable routes | Reduce delivery distance; reserve enough grain for seeds or processing. | Validated layouts and blueprints, visible buffer/throughput limits, old fixed-map saves preserved. |
 | Later: living fields | Crop rotation, adjacency effects, and crop-specific harvest rules | Alternate soil-restoring crops with hungry crops; reserve irrigation for the right field zone. | Each crop changes code structure or planning, not just its price; inspectors explain effects. |
@@ -30,7 +30,7 @@ The proposed differentiator is the interaction between ecology and factory sched
 | Later: specialization | Scout/sensor, irrigator, hauler attachments and research branches | Trade cargo capacity for watering reach or sensing coverage. | Sidegrades create distinct strategies; ordinary Python control flow stays available from the start. |
 | Later: sharing | Local challenge seeds and code/blueprint export | Compare two programs against the exact same starting farm and rule set. | Portable validated artifacts, deterministic results, no hosted account system required. |
 
-The best next milestone is **efficiency feedback plus three contract scenarios**. It makes the new drone team interesting immediately and provides evidence for balancing later machines. Suggested scenarios: a bakery rush, a water-budget challenge, and a congested storage challenge. Exact targets need playtesting; do not silently treat these numbers as shipped game rules.
+**Efficiency feedback plus three contract scenarios** is delivered: Bakery Rush, Waterwise Harvest and Full Buffers, each with separate solo/team records. All six starter variants complete within their tested budgets. [Exact shipped rules and results](CHALLENGES.md). The next proposed milestone is one conserved byproduct chain that makes crop-care and production decisions interact; its recipes and quantities still need design.
 
 ## Configurable complexity
 
@@ -41,7 +41,7 @@ Introduce systems when they create a new decision. Avoid adding several routine 
 ## Technical sequence
 
 1. Build on the implemented shared-clock scheduler and versioned saves; do not tick the world once per drone or conveyor.
-2. Add bounded measurement counters and a snapshot-based scenario runner before scoring or leaderboards.
+2. Bounded measurement counters, a snapshot-based scenario runner and local personal records are implemented. Online leaderboards remain a separate proposal.
 3. Add one conserved byproduct chain and a visible bottleneck inspector before increasing item count.
 4. Design schema migration and construction validation before movable buildings or blueprints.
 5. Keep complete original artwork/code; study design principles rather than copying assets, maps, progression names, or exact puzzles.

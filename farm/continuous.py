@@ -13,7 +13,7 @@ from .interpreter import (Interpreter, Function, ScriptError, ACTIONS, FACTORY_A
                           RESERVED, MAX_SOURCE, MAX_OPERATIONS)
 from .engine import GameError
 from .factory import Factory
-from . import cultivation
+from . import cultivation, challenges
 
 MAX_CHECKPOINT = 48000
 MAX_STACK = 2500
@@ -420,6 +420,7 @@ class ContinuousInterpreter(Interpreter):
                     done = True
                     break
                 self.instruction(instruction)
+            done = done or challenges.terminal(self.farm.state)
             if not done:
                 checkpoint = self.checkpoint()
         except (ScriptError, GameError, TypeError, ValueError, ZeroDivisionError, IndexError, OverflowError, RecursionError) as exc:
@@ -431,6 +432,7 @@ class ContinuousInterpreter(Interpreter):
 
 
 def step_script(source, state, checkpoint=None):
+    challenges.execution(state, 1)
     try:
         interpreter = ContinuousInterpreter(source, state, checkpoint)
     except (SyntaxError, ScriptError) as exc:

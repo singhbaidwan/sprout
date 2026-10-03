@@ -253,3 +253,35 @@ This milestone is committed and pushed as one coherent change under the owner's 
 - The fresh full-suite run exposed a test-client race: the server correctly rejected an oversized request with HTTP 413 before its body finished sending, producing BrokenPipeError in the test harness. Updated the harness to read and verify the response after an early broken pipe; the focused HTTP suite passes.
 - Restarted the local game with the working Python runtime. The existing browser save restored at tick 124, 67 coins, 15 carried wheat, and 116 ticks remaining on its active order, with the repaired `store_cargo()` helper present. No game action was taken on this save.
 - Final verification passed: all 94 tests on Python 3.12.14 (36.1 seconds), all JavaScript module syntax checks, and whitespace/diff checks. The live restored game exposes team mode and the 180px log without horizontal overflow. The final handoff records the confirmed published commit.
+
+## 2026-10-03 — efficiency dashboard and reproducible challenges
+
+### Scope and decisions
+
+Continued the recommended next milestone from the published two-drone release (`5a21b54`), starting from a clean `main`. Selected measurable optimization plus three replayable scenarios. Conserved byproduct recipes, construction, power and larger fleets remain proposals rather than part of this change.
+
+### Implemented work
+
+- Added optional version 1 Breadworks efficiency windows: successful commands, moves begun with empty cargo, waits, transfers, manual watering, all tank consumption, and per-machine working/input-starved/output-full ticks. Baselines are captured before the first successful action. Team planning copies do not contribute counters; committed drone commands count individually while the shared world phase counts once.
+- Added a dashboard with deliveries per 100 ticks, water per loaf, empty travel, machine-time bars and text, and a bottleneck hint. Campaign measurements can restart between programs without advancing time. Old saves/checkpoint bindings remain unchanged until their next action or an explicit measurement reset. Classic has no new measurement extension.
+- Added Bakery Rush (12 bread/180 ticks), Waterwise Harvest (12 bread/500 ticks/24 tank water), and Full Buffers (24 bread/240 ticks). Each has fixed starting inventory, layout, settings and equipment, and supports one or two drones. Ordinary care actions remain usable; refilling does not erase consumed water. The contract resolves after one shared phase and cleanly stops every execution mode on success/failure, including the exact last-tick success case.
+- Added a separate trial session with its own programs, speed, mode and checkpoint. Starting a challenge preserves both campaigns. Retry resets the fixed farm and preserves edited programs; Return restores the campaign; View saved attempt reopens the retained trial. Reload/import restore active controllers paused. Settings, upgrades, orders, metric resets and wrong-count execution modes are rejected for trials.
+- Added six personal-record groups, best-success ranking by ticks/water/empty moves, last and previous results, changes between consecutive successes, and resolved-attempt counts. A persisted envelope marker prevents duplicate records on reload. Records remain editable local data, not an anti-cheat boundary.
+- Added three challenge starter files and two HTTP endpoints, retained bounded execution and local-only hosting, and expanded save validation to 1,000,000 request bytes / 990 KB imported files. Controller request limits stay at 600,000 bytes. Validated optional schema fields keep existing saves compatible.
+- Updated README, requirements, architecture, player guide, roadmap and design direction; added [CHALLENGES.md](CHALLENGES.md) with exact rules, measurement definitions, schemas, limits and starter baselines. CI now includes the JavaScript record-persistence check.
+
+### Verification
+
+- **111 Python tests passed on Python 3.12.14 in 38.1 seconds**, including loopback HTTP integration tests. New tests cover all six starter completions, deterministic snapshots, action atomicity, pre-delivery baselines, shared manual/automatic water accounting, machine tick categories, old checkpoint bindings, fixed rules/counts, terminal states, exact deadlines, water-budget precedence/refill behavior, isolated portable trials, record bounds and recorded-result consistency.
+- All five browser JavaScript modules pass syntax checks. The Node check verifies successful ranking, failed-attempt retention, previous-result comparison data, per-team record separation and duplicate suppression after serialized reload. Whitespace checks pass.
+- The first full HTTP run found a client-side connection reset while uploading an already-rejected oversized body. The test now submits an oversized declared Content-Length with a short body, verifying the server's early HTTP 413 response without depending on platform-specific upload timing. Focused HTTP tests and the final full suite pass.
+- Simulated starters completed: Rush solo/team in 143/149 ticks, Waterwise in 462/219 ticks (24 water each), Full Buffers in 117/111 ticks. These are baselines, not optimal strategies; the stocked-grain Rush demonstrates that adding a farmer does not necessarily shorten transport-bound work.
+- Browser QA used the separate `127.0.0.1:8001` origin. Full Buffers reloaded its tick-1 controller paused, retried with the same code, completed bounded playback at tick 117, and retained exactly one record after reload. Return restored its campaign at tick 1393, 145 bread, and the original farmer program.
+- Two-drone Waterwise executed two commands in one tick and used 2 water. Reload restored both controllers paused. Stop/Return/View saved attempt preserved the retained world. Its live run completed at tick 219 with 12 bread and exactly 24 water; the dashboard showed 438 commands across 219 shared ticks. No browser error/warning logs were observed.
+- Responsive checks found equal content/client widths at the default narrow viewport (436 px) and desktop (1410 px). The temporary desktop override was reset. Preview screenshots and test logs are outside the repository.
+
+### Remaining work and publication
+
+Measurement totals and bars are implemented; time-series graphs, metric-query Python APIs, hosted rankings, new recipes, configurable weather and movable buildings are not. Future scenario rule changes need a versioned record migration. The next recommended milestone is a conserved crop-byproduct chain linking soil care with factory production. It needs its own recipe/balance design.
+
+This completed feature is committed and pushed as one milestone under the owner's standing preference. The handoff records the remotely verified commit; remote CI execution is separate from the local verification above.

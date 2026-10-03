@@ -1,4 +1,5 @@
 import { setupCare, updateCare, describeCare, cultivationGuide } from './cultivation-ui.js';
+import { setupChallenges, updateOptimization, recordChallenge, terminalChallenge } from './challenges-ui.js';
 import { FarmRenderer } from './farm.js';
 import { describeFactoryTile, setupFactory, updateFactory, factoryGuide } from './factory-ui.js';
 
@@ -7,6 +8,8 @@ const STORAGE_KEY = 'sprout.save.v2';
 const editor = $('code-editor');
 let state, crops, missions, examples, initialState, chapters, catalog, careRules;
 const isFactory = () => state?.scenario === 'factory';
+const inTrial = () => Boolean(state?.challenge);
+const activeSavedGame = () => saveData.trial?.active ? saveData.trial.game : saveData.games[saveData.active];
 let checkpoint = null, stepping = false;
 const teamMode = () => $('execution-select').value === 'team';
 const continuous = () => ['continuous', 'team'].includes($('execution-select').value);
@@ -56,7 +59,9 @@ function log(message, kind = 'info', line = null) {
 function save() {
   if (!state) return;
   rememberCode();
-  saveData.games[saveData.active] = { state, code: primaryCode, ...(isFactory() ? {team_code: teamCode} : {}), speed: $('speed-select').value, execution: $('execution-select').value, ...(checkpoint ? { checkpoint } : {}) };
+  const game = { state, code: primaryCode, ...(isFactory() ? {team_code: teamCode} : {}), speed: $('speed-select').value, execution: $('execution-select').value, ...(checkpoint ? { checkpoint } : {}) };
+  if (inTrial()) saveData.trial.game = game;
+  else saveData.games[saveData.active] = game;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
     $('save-status').textContent = 'Saved on this device';
@@ -147,21 +152,21 @@ function setMode(next, label) {
   $('execution-select').disabled = busy;
   $('team-starter').disabled = busy;
   $('execution-help').textContent = teamMode() ? 'Two Python programs. Step advances both drones by one shared tick. Stop to edit.' : continuous() ? 'Keeps its place between actions. Reload restores it paused. Stop lets you edit.' : 'Runs up to 400 actions. Choose Continuous for long-running loops.';
-  $('run-button').disabled = mode === 'loading' || !state;
+  $('run-button').disabled = mode === 'loading' || !state || terminalChallenge(state);
   $('run-label').textContent = mode === 'running' ? 'Pause' : mode === 'paused' ? 'Resume' : mode === 'loading' ? 'Preparing…' : 'Run code';
   $('run-symbol').textContent = mode === 'running' ? 'Ⅱ' : '▶';
-  $('step-button').disabled = stepping || mode === 'running' || mode === 'loading' || !state;
+  $('step-button').disabled = stepping || mode === 'running' || mode === 'loading' || !state || terminalChallenge(state);
   $('stop-button').disabled = !busy || !state;
-  $('reset-open').disabled = $('reset-footer').disabled = $('reset-confirm').disabled = !state;
+  $('reset-open').disabled = $('reset-footer').disabled = $('reset-confirm').disabled = !state || inTrial();
   $('export-save').disabled = !state;
   $('import-save').disabled = busy || !state;
-  document.querySelectorAll('[data-chapter]').forEach(button => { button.disabled = busy || !state; });
-  if (isFactory()) updateFactory(state, catalog, busy);
-  if (state && careRules) updateCare(state, careRules, busy);
+  document.querySelectorAll('[data-chapter]').forEach(button => { button.disabled = busy || !state || inTrial(); });
+  if (isFactory()) updateFactory(state, catalog, busy || inTrial());
+  if (state && careRules) updateCare(state, careRules, busy || inTrial());
   $('runtime-status').textContent = label || ({ idle: 'Ready when you are', paused: 'Paused · step or resume', running: 'Program running', loading: 'Preparing your program', error: 'Check your program' }[mode]);
   $('runtime-dot').className = `status-dot ${mode === 'running' ? 'running' : mode === 'error' ? 'error' : ''}`;
   $('field-status').textContent = mode === 'running' ? 'Drone working' : mode === 'paused' ? 'Drone paused' : 'Drone ready';
-  if (state) { updateUpgrades(); updateTeam(); }
+  if (state) { updateUpgrades(); updateTeam(); updateOptimization(state, saveData, busy); }
 }
 
 function updateState(next, action = null) {
@@ -174,8 +179,9 @@ function updateState(next, action = null) {
   renderer.update(state, action);
   updateTeam();
   updateInspector(); updateMission(); updateUpgrades();
-  if (isFactory()) updateFactory(state, catalog, ['running', 'paused', 'loading'].includes(mode));
-  updateCare(state, careRules, ['running', 'paused', 'loading'].includes(mode));
+  if (isFactory()) updateFactory(state, catalog, inTrial() || ['running', 'paused', 'loading'].includes(mode));
+  updateCare(state, careRules, inTrial() || ['running', 'paused', 'loading'].includes(mode));
+  updateOptimization(state, saveData, ['running', 'paused', 'loading'].includes(mode));
 }
 
 function tileDescription(tile, x, y) {
@@ -203,6 +209,7 @@ function updateMission() {
   ];
   document.querySelector('.editor-tip p').textContent = isFactory() ? (missions[state.completed.length]?.hint || 'Campaign complete. Improve your delivery record or write your own production controller.') : tips[Math.min(state.completed.length, 4)];
   if (Object.values(state.care.settings).some(Boolean)) document.querySelector('.editor-tip p').textContent += ' Growing options are on: Smart crop care demonstrates supply checks.';
+  if (inTrial()) document.querySelector('.editor-tip p').textContent = 'Run the challenge starter, inspect the dashboard, then Stop and improve your code. Retry restores the same world and keeps your programs.';
   const mission = missions[state.completed.length];
   if (!mission) {
     $('mission-number').textContent = `ALL ${missions.length} MISSIONS COMPLETE`;
@@ -239,7 +246,7 @@ function updateUpgrades() {
     const unlocked = isFactory() ? state.upgrades.includes(item.id) : item.id === 'expansion' ? state.size === 8 : state.unlocked.includes(item.id);
     const button = card.querySelector('button');
     card.classList.toggle('unlocked', unlocked);
-    button.disabled = unlocked || state.coins < item.cost || ['running', 'paused', 'loading'].includes(mode);
+    button.disabled = inTrial() || unlocked || state.coins < item.cost || ['running', 'paused', 'loading'].includes(mode);
     button.textContent = unlocked ? '✓ Unlocked' : `Unlock · ${item.cost} coins`;
     button.title = unlocked ? 'Already unlocked' : state.coins < item.cost ? `${item.cost - state.coins} more coins needed` : `Unlock ${item.title}`;
     button.setAttribute('aria-label', unlocked ? `${item.title} unlocked` : `Unlock ${item.title} for ${item.cost} coins`);
@@ -247,7 +254,7 @@ function updateUpgrades() {
 }
 
 async function unlock(item) {
-  if (!['idle', 'error'].includes(mode)) return;
+  if (inTrial() || !['idle', 'error'].includes(mode)) return;
   const token = ++requestToken;
   controller = new AbortController();
   setMode('loading', 'Opening the workshop…');
@@ -262,7 +269,7 @@ async function unlock(item) {
 }
 
 async function prepare(singleStep = false) {
-  if (!state || mode === 'loading') return;
+  if (!state || mode === 'loading' || terminalChallenge(state)) return;
   if (continuous()) {
     checkpoint = null; currentLine = errorLine = null; updateLines();
     setMode(singleStep ? 'paused' : 'running');
@@ -301,7 +308,12 @@ function applyFrame(frame) {
 function finish() {
   clearTimeout(timer); timer = null;
   currentLine = null;
-  if (resultError) {
+  if (terminalChallenge(state)) {
+    checkpoint = null; resultError = null;
+    recordChallenge(saveData, state);
+    const message = state.challenge.status === 'complete' ? `Challenge complete in ${state.tick} ticks. Retry to improve your record.` : 'Challenge budget reached. Improve your program and retry.';
+    log(message, state.challenge.status === 'complete' ? 'success' : 'info'); setMode('idle', message);
+  } else if (resultError) {
     if (teamMode() && resultError.drone !== undefined) showDrone(resultError.drone);
     errorLine = resultError.line;
     log(`${resultError.line ? `Line ${resultError.line}: ` : ''}${resultError.message}`, 'error');
@@ -354,7 +366,7 @@ async function continuousStep() {
   } finally {
     if (token === requestToken) {
       stepping = false;
-      $('step-button').disabled = mode === 'running' || mode === 'loading';
+      $('step-button').disabled = mode === 'running' || mode === 'loading' || terminalChallenge(state);
       if (mode === 'running') timer = setTimeout(play, 560 / Number($('speed-select').value));
     }
   }
@@ -378,7 +390,7 @@ function renderGuide(tab) {
   document.querySelectorAll('.guide-tab').forEach(button => button.classList.toggle('active', button.dataset.guide === tab));
   if (tab === 'automation') { $('guide-content').innerHTML = `<h3>A factory that keeps running</h3><p>Choose <strong>Continuous</strong> above the editor or load <strong>Continuous autopilot</strong>. Your script can use <code>while True:</code> to tend crops and keep machines supplied. A finite script still finishes normally.</p><pre>while True:\n    if can_harvest():\n        harvest()\n    else:\n        wait()</pre><p><strong>Pause</strong> freezes the farm at the last displayed action. <strong>Step</strong> completes at most one action, including one tile of a route. <strong>Resume</strong> continues from the saved variables and function calls. <strong>Stop</strong> keeps farm progress and clears the controller so you can edit, switch chapters, or change growing options.</p><p>World and program position save together after each action. Reloads and imported saves restore paused; nothing runs while the page is closed. Speed changes real-world pacing only. Crops, irrigation, machines, and delivery deadlines share one action clock.</p><h3>Drone team · Breadworks</h3><p>Choose <strong>Drone team (2)</strong> and <strong>Load team starter</strong>. Switch between Drone 1 and Drone 2 to edit their separate programs. Existing commands act on that program’s drone; cargo is separate, while coins, care supplies, storage and machines are shared. One Step gives each drone up to one action, then advances the world once. Shared pads and crop work take turns. Drones fly in separate air lanes, so paths may cross. The second drone parks with its cargo when you return to solo mode.</p><p>Observe shared inventories immediately before transferring. A contested action retries with fresh queries; an invalid command stops both programs. Both programs and their positions save together and restore paused.</p><p>Continuous mode allows 20,000 interpreter operations and 100 printed messages between actions, with 48 KB of controller memory. An infinite loop must perform an action such as <code>wait()</code>. Bounded run retains its 400-action limit. Imports, attributes, files, and unrestricted Python remain unavailable.</p>`; return; }
   if (tab === 'care') { $('guide-content').innerHTML = cultivationGuide(); return; }
-  if (isFactory()) { $('guide-content').innerHTML = factoryGuide(tab, catalog, missions); return; }
+  if (isFactory()) { $('guide-content').innerHTML = (tab === 'learn' ? '<h3>Automation challenges</h3><p>Choose a scenario and one or two drones in the challenge panel. Each attempt starts on a separate farm with fixed rules and a starter program. Run it, inspect machine waiting time, water use and empty travel, then Stop to edit and Retry with your code. Your personal records compare the same scenario and team size. Use Continuous for Waterwise Harvest: its budget is longer than the 400-action bounded run.</p><p>Success or an exceeded budget stops the attempt. Return to farm restores your campaign. View saved attempt reopens a parked challenge; reload restores its controller paused. Restart measurement in your campaign to compare experiments over a new window.</p>' : '') + factoryGuide(tab, catalog, missions); return; }
   const content = {
     learn: `<p>You have a small patch of land, a solar-powered drone, and a Python editor. A good routine is all your farm needs.</p><ol><li><strong>Make your first harvest.</strong> The first three plots have ripe wheat. Run the starter program to harvest them, replant the row, and earn your first mission reward.</li><li><strong>Grow a crop.</strong> Use <code>till()</code>, <code>plant("wheat")</code>, then <code>water()</code>. Crops grow when the drone takes actions. Use <code>wait()</code> if you have nothing else to do.</li><li><strong>Think in loops.</strong> Load “The whole field” to plant every plot. Load “Harvest & replant” to maintain it. Each run continues from your current farm state.</li><li><strong>Make room to grow.</strong> Spend coins on carrots, sunflowers, and more land. Complete all four missions, then experiment freely.</li></ol><h3>You're in control</h3><p><strong>Run code</strong> starts or resumes a program. <strong>Pause</strong> freezes it. <strong>Step</strong> performs one drone action. <strong>Stop</strong> discards the remaining actions and keeps the changes you have already seen. Speed changes the animation, not crop growth rules.</p><h3>A few helpful details</h3><p>The field wraps at its edges. North decreases y; east increases x. Time only passes during actions. There is no battery to manage. Water refills are needed only with Irrigation enabled, and wheat has a free emergency seed if you run out of coins. Your farm and editor save on this device.</p><p>Use <strong>Ctrl/Cmd + Enter</strong> to run or pause, <strong>Tab</strong> for four spaces, and <strong>Shift + Tab</strong> to unindent. Select a tile or use Inspect plots to learn what it needs.</p>`,
     api: `<p>Farm Python is a bounded subset of Python. It supports variables, math, lists, indexing, <code>if</code>, <code>for</code>, <code>while</code>, <code>def</code>, <code>return</code>, <code>break</code>, and <code>continue</code>. Imports, attributes, packages, comprehensions, and file access are unavailable.</p><h3>Drone commands · each takes one tick</h3><table><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>move("east")</code></td><td>Move one plot. Also north, south, west. Edges wrap.</td></tr><tr><td><code>till()</code></td><td>Prepare an empty plot for planting.</td></tr><tr><td><code>plant("wheat")</code></td><td>Spend coins on a seed. Also carrot or sunflower after unlocking.</td></tr><tr><td><code>water()</code></td><td>Give this plot 24 ticks of moisture, including this action's tick.</td></tr><tr><td><code>harvest()</code></td><td>Sell a ripe crop. The soil stays tilled.</td></tr><tr><td><code>wait()</code></td><td>Let one tick pass without moving.</td></tr></tbody></table><h3>Queries · no time passes</h3><p><code>can_harvest()</code> → boolean<br><code>get_crop()</code> → crop name or None<br><code>get_water()</code> → remaining moisture ticks<br><code>is_tilled()</code> → boolean<br><code>get_x()</code>, <code>get_y()</code> → drone coordinates<br><code>get_size()</code> → field width (6 or 8)<br><code>get_coins()</code> → current balance</p><h3>Python helpers</h3><p><code>range()</code>, <code>len()</code>, <code>min()</code>, <code>max()</code>, <code>abs()</code>, <code>int()</code>, <code>str()</code>, and <code>print()</code>. Functions use positional arguments. Lists are read-only; build a new list to change one.</p><pre>while not can_harvest():\n    if get_water() == 0:\n        water()\n    else:\n        wait()\nharvest()</pre><p>Bounded run allows up to 400 drone actions and 20,000 interpreter operations. Choose Continuous for ongoing automation; see the Continuous guide tab. Programs exceeding their work budget stop with a useful error; already-played actions remain.</p>`,
@@ -398,6 +410,7 @@ function showPlots() {
 }
 
 function runOrPause() {
+  if (terminalChallenge(state)) return;
   if (mode === 'running') {
     clearTimeout(timer);
     if (continuous()) { ++requestToken; controller?.abort(); stepping = false; }
@@ -469,11 +482,11 @@ $('save-file').addEventListener('change', async event => {
   const token = ++requestToken; controller = new AbortController();
   setMode('loading', 'Checking save…');
   try {
-    if (file.size > 590000) throw new Error('Save files must be under 590 KB.');
+    if (file.size > 990000) throw new Error('Save files must be under 990 KB.');
     const result = await api('save/validate', { save: JSON.parse(await file.text()) }, controller.signal);
     if (token !== requestToken) return;
     pendingImport = result.save;
-    const game = pendingImport.games[pendingImport.active];
+    const game = pendingImport.trial?.active ? pendingImport.trial.game : pendingImport.games[pendingImport.active];
     $('import-summary').textContent = `${Object.keys(pendingImport.games).length} chapter(s), ${game.state.coins} coins, tick ${game.state.tick}. This replaces the saved chapters on this device.`;
     $('import-dialog').showModal();
   } catch (error) { if (token === requestToken) toast(`Save not imported: ${error.message}`, true); }
@@ -485,7 +498,7 @@ $('import-confirm').addEventListener('click', () => {
   try { localStorage.setItem('sprout.save.backup', JSON.stringify(saveData)); }
   catch { toast('Could not back up your current save. Export it before importing.', true); return; }
   stop(true); saveData = pendingImport; pendingImport = null;
-  const game = saveData.games[saveData.active];
+  const game = activeSavedGame();
   activateChapter(saveData.active, game); save();
   $('import-dialog').close(); toast('Save restored.');
 });
@@ -519,7 +532,11 @@ function activateChapter(name, game) {
   saveData.active = name;
   catalog = chapter.catalog; missions = chapter.missions; examples = chapter.examples;
   initialState = structuredClone(chapter.state);
-  const factory = name === 'factory';
+  const factory = name === 'factory', trial = Boolean(game.state.challenge);
+  document.querySelector('.mission-card').hidden = document.querySelector('.workshop').hidden = trial;
+  document.querySelector('.order-card').hidden = trial;
+  $('team-starter').hidden = trial;
+  document.querySelector('.care-note').textContent = trial ? 'Growing settings are fixed during this challenge. All water drawn from the tank counts toward its budget.' : 'Change options between runs. Turning a system off keeps its equipment and supplies. Each chapter has its own settings.';
   upgradeItems = factory ? catalog.upgrades : classicUpgradeItems;
   renderer.catalog = catalog;
   selected = renderer.selected = null;
@@ -538,21 +555,28 @@ function activateChapter(name, game) {
   document.querySelector('[data-guide="crops"]').textContent = factory ? 'Recipes & missions' : 'Crops & missions';
   const labels = factory ? {starter: 'First bread', harvest: 'Harvest & store', bakery: 'Farm to bakery', orders: 'Order runner'} : {starter: 'Your first row', full_field: 'The whole field', smart_farmer: 'Harvest & replant', carrots: 'A carrot patch'};
   Object.assign(labels, {team_farmer: 'Team: farmer', team_courier: 'Team: courier', continuous: 'Continuous autopilot', crop_care: 'Smart crop care', irrigation: 'Sprinkler network'});
+  $('example-select').hidden = trial;
+  if (trial) examples = {};
   $('example-select').innerHTML = '<option value="">Load example</option>' + Object.keys(examples).map(key => `<option value="${key}">${labels[key]}</option>`).join('');
-  $('execution-select').querySelector('[value=team]').disabled = !factory;
-  primaryCode = game.code; teamCode = game.team_code || 'while True:\n    wait()'; activeDrone = 0; droneStatuses = []; $('drone-select').value = '0';
+  for (const option of $('execution-select').options) option.disabled = option.value === 'team' ? !factory || trial && game.state.challenge.drones === 1 : trial && game.state.challenge.drones === 2;
+  primaryCode = game.code; teamCode = game.team_code ?? 'while True:\n    wait()'; activeDrone = 0; droneStatuses = []; $('drone-select').value = '0';
   createUpgrades(); setCode(primaryCode); $('speed-select').value = game.speed;
   checkpoint = game.checkpoint || null;
   $('execution-select').value = game.execution || 'finite';
   updateState(game.state);
+  if (trial) {
+    $('page-title').textContent = 'Make every tick count.';
+    $('chapter-description').textContent = 'Challenge farm · Return to farm restores your saved campaign.';
+    if (terminalChallenge(state)) { checkpoint = null; recordChallenge(saveData, state); }
+  }
   $('action-status').textContent = checkpoint ? 'Saved controller · ready to resume' : 'Ready for your next command';
   currentLine = teamMode() ? checkpoint?.controllers?.[0]?.checkpoint?.line || null : checkpoint?.line || null; updateLines();
-  setMode(checkpoint ? 'paused' : 'idle', checkpoint ? 'Checkpoint restored · Resume or Step' : undefined);
+  setMode(checkpoint ? 'paused' : 'idle', terminalChallenge(state) ? 'Attempt ended · Retry or Return to farm' : checkpoint ? 'Checkpoint restored · Resume or Step' : undefined);
 }
 
 document.querySelectorAll('[data-chapter]').forEach(button => button.addEventListener('click', () => {
   const name = button.dataset.chapter;
-  if (!state || !['idle', 'error'].includes(mode) || name === saveData.active) return;
+  if (!state || inTrial() || !['idle', 'error'].includes(mode) || name === saveData.active) return;
   save();
   const chapter = chapters[name];
   const game = saveData.games[name] || {state: structuredClone(chapter.state), code: chapter.examples.starter, speed: '2'};
@@ -562,7 +586,7 @@ document.querySelectorAll('[data-chapter]').forEach(button => button.addEventLis
 }));
 
 $('start-order').addEventListener('click', async () => {
-  if (!isFactory() || !['idle', 'error'].includes(mode)) return;
+  if (!isFactory() || inTrial() || !['idle', 'error'].includes(mode)) return;
   const token = ++requestToken; controller = new AbortController(); setMode('loading', 'Starting delivery order…');
   try {
     const result = await api('order', {state}, controller.signal);
@@ -575,7 +599,7 @@ $('start-order').addEventListener('click', async () => {
 });
 
 async function changeCare(settings) {
-  if (!state || !['idle', 'error'].includes(mode)) return;
+  if (!state || inTrial() || !['idle', 'error'].includes(mode)) return;
   const token = ++requestToken; controller = new AbortController();
   setMode('loading', 'Updating growing options…');
   try {
@@ -589,9 +613,47 @@ async function changeCare(settings) {
 }
 $('care-guide').addEventListener('click', () => openGuide('care'));
 
+$('challenge-start').addEventListener('click', async () => {
+  if (!isFactory() || !['idle', 'error'].includes(mode)) return;
+  save();
+  const retry = inTrial(), oldGame = retry ? saveData.trial.game : null;
+  const token = ++requestToken; controller = new AbortController(); setMode('loading', 'Preparing challenge…');
+  try {
+    const result = await api('challenge/start', {id: $('challenge-select').value, drones: Number($('challenge-drones').value)}, controller.signal);
+    if (token !== requestToken) return;
+    const game = {state: result.state, code: oldGame?.code ?? result.codes[0], team_code: oldGame?.team_code ?? result.codes[1],
+      speed: $('speed-select').value, execution: oldGame?.execution || (result.state.challenge.drones === 2 ? 'team' : 'continuous')};
+    saveData.trial = {active: true, recorded: false, game};
+    activateChapter('factory', game); save();
+    log(retry ? 'Same starting farm, your improved code. Try to beat your record.' : 'Challenge ready. Your campaign is saved separately.', 'success');
+  } catch (error) { if (token === requestToken) { setMode('idle'); toast(error.message, true); } }
+});
+$('challenge-return').addEventListener('click', () => {
+  if (!inTrial() || !['idle', 'error'].includes(mode)) return;
+  save(); saveData.trial.active = false;
+  activateChapter('factory', saveData.games.factory); save();
+  log('Back at your Breadworks campaign. Its world and programs are restored.', 'success');
+});
+$('challenge-resume').addEventListener('click', () => {
+  if (inTrial() || !saveData.trial || !['idle', 'error'].includes(mode)) return;
+  save(); saveData.trial.active = true;
+  activateChapter('factory', saveData.trial.game); save();
+});
+for (const id of ['challenge-select', 'challenge-drones']) $(id).addEventListener('change', () => updateOptimization(state, saveData, false));
+$('efficiency-reset').addEventListener('click', async () => {
+  if (!isFactory() || inTrial() || !['idle', 'error'].includes(mode)) return;
+  const token = ++requestToken; controller = new AbortController(); setMode('loading');
+  try {
+    const result = await api('efficiency/reset', {state}, controller.signal);
+    if (token !== requestToken) return;
+    updateState(result.state); setMode('idle'); save(); log(result.message);
+  } catch (error) { if (token === requestToken) { setMode('idle'); toast(error.message, true); } }
+});
+
 async function boot() {
   try {
     const data = await api('bootstrap');
+    setupChallenges(data.challenges);
     crops = data.crops; careRules = data.cultivation; setupCare(careRules, changeCare); chapters = data.chapters; examples = chapters.classic.examples;
     let restored = data.state, code = examples.starter, restoreMessage = null;
     try {
@@ -599,7 +661,7 @@ async function boot() {
       if (saved) {
         const valid = await api('save/validate', { save: saved });
         saveData = valid.save;
-        const game = saveData.games[saveData.active];
+        const game = activeSavedGame();
         restored = game.state; code = game.code; $('speed-select').value = game.speed;
         restoreMessage = 'Welcome back. Your farm and program have been restored.';
       }
@@ -609,7 +671,7 @@ async function boot() {
       restoreMessage = `Could not restore saved progress: ${error.message}. A fresh farm is ready.`;
       toast(restoreMessage, true);
     }
-    activateChapter(saveData.active, { ...saveData.games[saveData.active], state: restored, code, speed: $('speed-select').value });
+    activateChapter(saveData.active, { ...activeSavedGame(), state: restored, code, speed: $('speed-select').value });
     log(restoreMessage || 'Drone connected. Your first harvest is one program away.', 'success');
     log(restoreMessage ? 'Your next run continues from this field. Load an example for ideas.' : 'Tip: press Run code to try the starter program.');
     save();

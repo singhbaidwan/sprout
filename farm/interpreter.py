@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from .engine import GameError
 from .world import create_game
 from .factory import Factory
-from . import cultivation
+from . import cultivation, challenges
 
 MAX_SOURCE = 16000
 MAX_NODES = 2500
@@ -43,6 +43,10 @@ class ScriptError(Exception):
 
 class BreakSignal(Exception):
     pass
+
+
+class ScenarioComplete(Exception):
+    """Stop execution successfully at a scenario boundary."""
 
 
 class ContinueSignal(Exception):
@@ -280,6 +284,8 @@ class Interpreter:
             message = self.farm.action(name, *args)
             self.actions += 1
             self.frame(message, action=name)
+            if challenges.terminal(self.farm.state):
+                raise ScenarioComplete()
             return None
         if name in QUERIES:
             if args:
@@ -350,6 +356,8 @@ class Interpreter:
             tree = ast.parse(source)
             self.validate(tree)
             self.block(tree.body)
+        except ScenarioComplete:
+            pass
         except SyntaxError as exc:
             error = {"message": exc.msg, "line": exc.lineno}
         except (ScriptError, GameError) as exc:
@@ -364,4 +372,6 @@ class Interpreter:
 
 
 def run_script(source, state=None):
+    if state is not None:
+        challenges.execution(state, 1)
     return Interpreter(state).run(source)

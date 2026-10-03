@@ -102,6 +102,7 @@ class Farm:
 
     def advance(self):
         s = self.state
+        self.before_advance()
         s["tick"] += 1
         s["stats"]["actions"] += 1
         cultivation.irrigate(s)
@@ -124,8 +125,18 @@ class Farm:
     def advance_systems(self):
         """Scenario hook: advance other systems once, before checking missions."""
 
+    def before_advance(self):
+        """Scenario hook before the shared clock and irrigation phase."""
+
+    def action_context(self):
+        return None
+
+    def record_action(self, name, before):
+        """Scenario hook after successful mutation, before advancing time."""
+
     def action(self, name, *args):
         s, tile = self.state, self.tile
+        before = self.action_context()
         self.events = []
         position = f"({s['drone']['x']}, {s['drone']['y']})"
         if name in cultivation.ACTIONS:
@@ -188,6 +199,7 @@ class Farm:
                 message = "Waited one tick"
         else:
             raise GameError(f"Unknown drone action: {name}.")
+        self.record_action(name, before)
         self.advance()
         return message
 

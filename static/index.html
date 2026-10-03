@@ -25,6 +25,14 @@
 
     <details class="care-panel" id="care-panel"><summary><span><strong>Growing options</strong><small>Fertilizer, irrigation &amp; soil health · choose your challenge</small></span><span id="care-mode" class="pill">Simple farming</span></summary><div id="care-settings" class="care-settings"></div><div class="care-dashboard"><div><strong id="care-supplies"></strong><span id="care-network"></span></div><button id="care-guide" class="text-button">Automation guide ↗</button></div><div id="care-goals" class="care-goals"></div><p class="care-note">Change options between runs. Turning a system off keeps its equipment and supplies. Each chapter has its own settings.</p></details>
 
+    <section id="challenge-panel" class="challenge-panel" aria-labelledby="challenge-heading" hidden>
+      <div class="challenge-heading"><div><span class="eyebrow">CODE. MEASURE. IMPROVE.</span><h2 id="challenge-heading">Automation challenges</h2></div><span class="pill">Personal records · 1 or 2 drones</span></div>
+      <div class="challenge-controls"><label for="challenge-select">Scenario <select id="challenge-select"></select></label><label for="challenge-drones">Team <select id="challenge-drones"><option value="1">1 drone</option><option value="2">2 drones</option></select></label><button id="challenge-start" class="primary-button">Start challenge</button><button id="challenge-resume" class="secondary-button" hidden>View saved attempt</button><button id="challenge-return" class="secondary-button" hidden>Return to farm</button></div>
+      <p id="challenge-description"></p><p id="challenge-note" class="muted"></p>
+      <div id="challenge-progress" class="challenge-progress" hidden><strong id="challenge-status" role="status"></strong><span id="challenge-target"></span><progress id="challenge-goal" max="12" value="0" aria-label="Challenge bread delivered"></progress></div>
+      <p id="challenge-record" class="challenge-record"></p>
+    </section>
+
     <div id="connection-error" class="notice error-notice" role="alert" hidden></div>
     <div class="workspace">
       <div class="field-column">
@@ -47,6 +55,14 @@
           <div id="production-cards" class="production-cards"></div>
           <div class="order-card"><div><h3>Village delivery order</h3><p id="order-detail"></p><progress id="order-progress" value="0" max="12" aria-label="Timed delivery order progress"></progress><small id="order-best"></small></div><button id="start-order" class="secondary-button" disabled>Start order</button></div>
         </section>
+
+        <details id="efficiency-panel" class="panel efficiency-panel" open hidden><summary><strong>Efficiency dashboard</strong><span id="efficiency-window"></span></summary><div class="efficiency-body">
+          <div class="efficiency-metrics"><div><strong id="metric-throughput">—</strong><span>loaves / 100 ticks</span></div><div><strong id="metric-water">—</strong><span id="metric-water-label">tank water / loaf</span></div><div><strong id="metric-travel">—</strong><span>moves with empty cargo</span></div></div>
+          <p id="metric-activity"></p>
+          <div class="machine-measure"><strong>Mill</strong><div class="machine-time" aria-hidden="true"><span id="mill-working" class="working"></span><span id="mill-starved" class="starved"></span><span id="mill-output_full" class="output-full"></span></div><p>Working <b id="mill-working-value">0%</b> · waiting for input <b id="mill-starved-value">0%</b> · output full <b id="mill-output_full-value">0%</b></p></div>
+          <div class="machine-measure"><strong>Oven</strong><div class="machine-time" aria-hidden="true"><span id="oven-working" class="working"></span><span id="oven-starved" class="starved"></span><span id="oven-output_full" class="output-full"></span></div><p>Working <b id="oven-working-value">0%</b> · waiting for input <b id="oven-starved-value">0%</b> · output full <b id="oven-output_full-value">0%</b></p></div>
+          <div class="efficiency-footer"><p id="efficiency-hint"></p><button id="efficiency-reset" class="text-button">Restart measurement</button></div>
+        </div></details>
 
         <section id="team-panel" class="panel team-panel" aria-labelledby="team-title" hidden><div class="panel-heading"><h2 id="team-title">Your drone team</h2><span class="pill">One shared clock</span></div><div class="team-cards"><article><h3><span class="drone-dot"></span>Drone 1</h3><p id="team-drone-0"></p><p id="team-stock-0"></p><small id="team-status-0"></small></article><article><h3><span class="drone-dot blue"></span>Drone 2</h3><p id="team-drone-1"></p><p id="team-stock-1"></p><small id="team-status-1"></small></article></div></section>
         <section class="workshop" aria-labelledby="workshop-title"><div class="section-heading"><h2 id="workshop-title">Room to grow</h2><span>Turn good harvests into new possibilities.</span></div><div id="upgrade-list" class="upgrade-list"></div></section>

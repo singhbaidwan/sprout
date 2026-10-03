@@ -24,6 +24,9 @@ farm.js: responsive canvas world        POST /api/run → interpreter → Farm /
 | `farm/cultivation.py` | Versioned optional care state, configuration, supplies, irrigation, growth modifiers, harvest effects, goals, and APIs. |
 | `static/cultivation-ui.js` | Options, supply/goal dashboard, inspection text, and crop-care guide. |
 | `farm/factory.py` | Breadworks catalog, inventories, recipes, routes, upgrades, missions, orders, and strict world validation. |
+| `farm/efficiency.py` | Optional bounded counters, pre-action baselines and strict measurement validation. |
+| `farm/challenges.py` | Versioned snapshots, fixed budgets, outcome resolution and personal-score validation. |
+| `static/challenges-ui.js` | Challenge lobby/progress, measurement presentation, record ranking and duplicate-record prevention. |
 | `farm/world.py` | Explicit scenario selection and validation; classic and factory state versions remain distinct. |
 | `farm/saves.py` | Portable envelopes, chapter/world matching, legacy migration. |
 | `static/factory-ui.js` | Catalog-driven machine dashboard, order status, factory inspection and guide. |
@@ -89,7 +92,7 @@ This is a small game language, not a complete implementation of Python. In parti
 
 ## HTTP API
 
-All POST requests require `Content-Type: application/json`. Run/upgrade/order requests have the original 100,000-byte limit. Portable save validation and controller stepping permit 600,000 bytes for programs and checkpoints, including JSON escaping overhead. HTTP errors have `{ "error": "message" }`. Script errors are part of a successful `/api/run` response so earlier frames can still play.
+All POST requests require `Content-Type: application/json`. Run/upgrade/order requests have the original 100,000-byte limit. Portable save validation permits 1,000,000 bytes for campaign chapters, the isolated challenge trial and records; controller stepping retains 600,000 bytes for programs/checkpoints, including JSON escaping overhead. HTTP errors have `{ "error": "message" }`. Script errors are part of a successful `/api/run` response so earlier frames can still play.
 
 | Endpoint | Input | Output |
 | --- | --- | --- |
@@ -97,6 +100,8 @@ All POST requests require `Content-Type: application/json`. Run/upgrade/order re
 | `POST /api/validate` | `{state}` | `{state}` rebuilt from known fields |
 | `POST /api/run` | `{state, code}` | `{frames, error, actions, operations}` |
 | `POST /api/controller/step` | `{state, code, checkpoint?}` | `{frames, state, checkpoint, revision, done, error, actions, operations}` |
+| `POST /api/challenge/start` | `{id, drones}` | `{state, codes}` |
+| `POST /api/efficiency/reset` | `{state}` | `{state, message}` |
 | `POST /api/team/step` | `{state, codes: [source1, source2], checkpoint?}` | `{state, checkpoint, revision, done, error, frames, actions, operations, drones}` |
 | `POST /api/unlock` | `{state, item}` | `{state, message}` |
 | `POST /api/settings` | `{state, settings}` with three booleans | `{state, message}`; change growing options without ticking |
@@ -155,3 +160,12 @@ Shared examples query scenario and enabled features, illustrating independent sy
 A `TickFactory` defers `advance()`. Alternating drone priority applies valid commands against shared state, reserving non-movement work tiles. Losers restore the pre-step continuation and re-evaluate queries next tick. Movement may cross because the two drones use separate air lanes. Only after resolution does `Farm.advance()` grow crops, advance machines, and resolve missions/orders once. Successful command totals are counted separately from world ticks. Output from a blocked speculative step is discarded to avoid duplicated print messages.
 
 The response carries one final world, labeled message frames and two continuation records; the browser commits them together and uses the existing request/revision guards. A combined digest binds both sources and the world, including finished controllers. Team continuations are at most 100 KB and preserve the per-controller limits. Versioned optional world/save extensions preserve old solo checkpoint digests; disabling team execution retains the second drone's inventory and program. Full schema and player-facing conflict rules: [DRONE_TEAMS.md](DRONE_TEAMS.md).
+
+
+## Efficiency windows and isolated challenges
+
+`Farm` exposes no-op action-context, recording and before-advance hooks. `Factory` captures cargo/tank/delivery baselines before a successful action and counts it once. The shared world phase records automatic water consumption and categorizes each machine exactly once after transfers. Team planners mutate isolated copies; their measurements are discarded. Committed actions update the shared counters, then one `Farm.advance()` measures one phase. Failed or contested actions do not increment successful-command counters.
+
+Challenge goal resolution runs after machine/order processing in that phase. The bounded interpreter unwinds with an internal completion signal after emitting the terminal action frame; the resumable VM and team scheduler return `done` with no checkpoint. This leaves the ordinary language quotas intact and prevents further ticks after a terminal result. Fixed-count checks live at public execution entry points, so the team planner can continue using the same bounded VM.
+
+Metrics attach lazily: validation preserves old worlds without the extension, avoiding changes to checkpoint digests before the next action. Trial rules/metrics are strictly validated with the factory world. `saves.py` validates saved games through one helper and keeps campaign chapters, trial and personal records separate. Browser saves route challenge state to `trial.game`; the campaign remains untouched. The record marker is outside the source/world digest and survives export/reload. Rules, wire fields, measurements and migration boundaries are specified in [CHALLENGES.md](CHALLENGES.md).

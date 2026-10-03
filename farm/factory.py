@@ -2,7 +2,7 @@
 
 from collections import deque
 
-from . import cultivation
+from . import cultivation, efficiency, challenges
 from .engine import Farm, GameError, STAT_NAMES, empty_tile, integer, validate_state
 
 ITEMS = ("wheat", "flour", "bread")
@@ -124,6 +124,10 @@ def validate_factory(raw):
         delivered = state["stats"]["bread_delivered"] - order["start_delivered"]
         if order["status"] == "active" and (elapsed >= ORDER["deadline"] or delivered >= ORDER["target"]):
             raise GameError("This active order should already be resolved.")
+        if "efficiency" in raw:
+            state["efficiency"] = efficiency.validate(raw["efficiency"], state)
+        if "challenge" in raw:
+            state["challenge"] = challenges.validate(raw["challenge"], state)
         return state
     except (KeyError, TypeError, IndexError) as exc:
         raise GameError("This Breadworks save is incomplete or malformed.") from exc
@@ -205,9 +209,15 @@ class Factory(Farm):
 
     def advance_systems(self):
         s = self.state
+        metrics = efficiency.ensure(s)
+        metrics['ticks'] += 1
+        metrics['water_used'] += max(0, self._tank_before - s['care']['tank'])
         # Transfers happen first; every machine then advances exactly once.
         for name in ("mill", "oven"):
             machine, definition = s["machines"][name], ENTITIES[name]
+            working = bool(machine['remaining'] or machine['input'] >= definition['amount'] and machine['output'] < definition['output_capacity'])
+            bucket = 'working' if working else 'output_full' if machine['output'] >= definition['output_capacity'] else 'starved'
+            metrics['machines'][name][bucket] += 1
             if not machine["remaining"] and machine["input"] >= definition["amount"] and machine["output"] < definition["output_capacity"]:
                 machine["input"] -= definition["amount"]
                 machine["remaining"] = definition["ticks"] // (2 if name in s["upgrades"] else 1)
@@ -228,9 +238,22 @@ class Factory(Farm):
             elif elapsed >= ORDER["deadline"]:
                 order["status"] = "failed"
                 self.events.append("Order expired. Your stock and deliveries are kept. Try another route!")
+        challenges.advance(s, self.events)
+
+    def action_context(self):
+        return efficiency.context(self.state)
+
+    def record_action(self, name, before):
+        efficiency.record_action(self.state, name, before)
+
+    def before_advance(self):
+        efficiency.ensure(self.state)
+        self._tank_before = self.state['care']['tank']
 
     def start_order(self):
         s = self.state
+        if 'challenge' in s:
+            raise GameError('The challenge contract replaces delivery orders in this attempt.')
         if s["order"]["status"] == "active":
             raise GameError("An order is already running.")
         if s["stats"]["bread_delivered"] < ORDER["unlock"]:
@@ -240,6 +263,9 @@ class Factory(Farm):
 
     def action(self, name, *args):
         s = self.state
+        if challenges.terminal(s):
+            raise GameError('This challenge has ended. Retry or return to your farm.')
+        before = self.action_context()
         self.events = []
         if name == "move":
             if len(args) != 1 or type(args[0]) is not str or args[0] not in DIRECTIONS:
@@ -309,10 +335,13 @@ class Factory(Farm):
             message = f"Harvested {amount} wheat into drone cargo"
         else:
             return super().action(name, *args)
+        self.record_action(name, before)
         self.advance()
         return message
 
     def unlock(self, item):
+        if 'challenge' in self.state:
+            raise GameError('Challenge upgrades are fixed. Return to your farm to buy upgrades.')
         upgrade = next((entry for entry in UPGRADES if entry["id"] == item), None)
         if not upgrade:
             raise GameError("Unknown Breadworks upgrade.")

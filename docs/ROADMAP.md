@@ -1,6 +1,6 @@
 # Roadmap — from a farm to a programmable factory
 
-**Updated:** 2026-09-20. **Playable today:** Home farm, the Breadworks production chapter, configurable crop care, and continuous automation in both. Future stages below are proposals, not delivery commitments.
+**Updated:** 2026-10-03. **Playable today:** Home farm, the Breadworks production chapter, configurable crop care, continuous automation, two-drone Breadworks teams, and three measured automation challenges. Future stages below are proposals, not delivery commitments.
 
 ## Direction
 
@@ -17,6 +17,8 @@ The initial inspiration was Factorio's emphasis on factories, infrastructure, re
 | 2 — First production chain | Separate Breadworks scenario, cargo, chest, mill, oven, depot, recipes, obstacles and routes, live machine status, six missions, three upgrades, four examples, optional timed delivery orders. | A finite script processes harvested wheat into delivered bread with conserved items. Saves preserve both chapters and active batches. One drone, fixed buildings, no conveyors or construction yet. |
 | 2a — Crop care | Independent fertilizer, irrigation, and soil-health options; placeable sprinklers, supply management, compost, two shared scripts, and three extra goals. | All eight option combinations tested in both chapters. Existing saves migrate with options off. [Full rules](CROP_CARE.md). |
 | 3 — Continuous operation | Optional resumable Python execution, one-action shared-clock boundary, bounded work, ordered browser updates, portable checkpoints, and two continuous examples. | One drone; reload/import restore paused. Deterministic retry and checkpoint tests pass, including all care combinations. [Rules and limitations](CONTINUOUS.md). |
+| 4 — Two-drone teams | Separate Python controllers and cargo; deterministic shared work; one clock; portable team checkpoints. | All care combinations sustain production. [Rules](DRONE_TEAMS.md). |
+| 4a — Efficiency and challenges | Shared-clock dashboard; Bakery Rush, Waterwise Harvest, Full Buffers; one/two-drone records; isolated trial saves and retry. | All six starters complete under fixed budgets. Old checkpoint hashes remain valid; campaign restores independently. [Rules](CHALLENGES.md). |
 
 ```mermaid
 flowchart LR
@@ -45,7 +47,7 @@ The game now poses several distinct problems: a full drone cannot harvest; a ful
 
 | Stage | Deliverable | Completion check |
 | --- | --- | --- |
-| 4 — Logistics and building | Two-drone team delivered; next consider efficiency scenarios, placeable machines, limited-capacity conveyors and saved routes. Physical movement conflicts are optional future scope. | Controllers cooperate without duplicate items, permanent starvation, or double-speed world time. Blueprints preserve validated layouts. |
+| 4 — Logistics and building | Two-drone teams and efficiency scenarios delivered; next consider placeable machines, limited-capacity conveyors and saved routes. Physical movement conflicts are optional future scope. | Controllers cooperate without duplicate items, permanent starvation, or double-speed world time. Blueprints preserve validated layouts. |
 | 5 — Deeper production | Power, research, additional byproduct recipes, multiple recipes, varied contracts, throughput and idle-time graphs. | Players can see a bottleneck, change code, and measure improved output. |
 | 6 — Scale and sharing | Larger maps, script/blueprint sharing, performance profiling, then optional accounts and hosting. | Representative worlds meet performance budgets; public execution has an isolated deployment design. |
 
@@ -71,7 +73,7 @@ The current browser checks request tokens and checkpoint revisions, and checkpoi
 
 The version 2 portable envelope already holds independent chapter saves. Classic worlds remain version 1; Breadworks worlds use version 2 with an explicit scenario, inventories, machine progress, upgrades, and order state. Legacy single-farm envelopes migrate into classic mode.
 
-The optional team extension preserves old saves and checkpoints; see [DRONE_TEAMS.md](DRONE_TEAMS.md). Future schemas must explicitly migrate existing chapters, including ingredients already consumed by active batches. Continuous controllers now have versioned execution frames and paused reload behavior; old saves default to finite mode. Add migration fixtures before changing storage and retain a recoverable backup.
+The optional team extension preserves old saves and checkpoints; see [DRONE_TEAMS.md](DRONE_TEAMS.md). The optional efficiency/trial/record extensions preserve campaigns and old checkpoints; see [CHALLENGES.md](CHALLENGES.md). Future schemas must explicitly migrate existing chapters, including ingredients already consumed by active batches. Continuous controllers now have versioned execution frames and paused reload behavior; old saves default to finite mode. Add migration fixtures before changing storage and retain a recoverable backup.
 
 Classic harvests sell immediately and classic scripts assume wrapped edges. Keep those semantics scoped to Home farm. Factory APIs and map rules must never silently reinterpret classic saves or tutorials.
 
@@ -95,4 +97,4 @@ Future configurable modules could add weather, pests, crop rotation bonuses, and
 
 ## Current design recommendation
 
-The two-drone team is implemented. Factorio / The Farmer Was Replaced research and a ranked proposal list are in [DESIGN_DIRECTION.md](DESIGN_DIRECTION.md). The recommended next bounded milestone is a measurable efficiency dashboard plus reproducible village contract scenarios, followed by a conserved byproduct chain. These proposals require a separate scope decision; they are not shipped features or callable APIs.
+The two-drone team is implemented. Factorio / The Farmer Was Replaced research and a ranked proposal list are in [DESIGN_DIRECTION.md](DESIGN_DIRECTION.md). The efficiency dashboard and three reproducible contract scenarios are delivered; see [CHALLENGES.md](CHALLENGES.md). The next proposed bounded milestone is a conserved byproduct chain. New recipes and buildable logistics need their own scope decision and are not shipped features or callable APIs.

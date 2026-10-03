@@ -8,6 +8,7 @@ from .continuous import ContinuousInterpreter, validate_checkpoint
 from .engine import Farm, GameError, integer
 from .factory import Factory, inventory, validate_factory
 from .interpreter import ScriptError
+from . import challenges
 
 
 def enable_team(state):
@@ -87,6 +88,7 @@ def validate_team_checkpoint(codes, state, raw):
 
 def step_team(codes, state, checkpoint=None):
     programs(codes)
+    challenges.execution(state, 2)
     state = enable_team(state)
     previous = validate_team_checkpoint(codes, state, checkpoint) if checkpoint is not None else None
     revision = (previous['revision'] if previous else 0) + 1
@@ -161,7 +163,7 @@ def step_team(codes, state, checkpoint=None):
     if active:
         result['frames'].append({'line': None, 'message': f"Team tick {farm.state['tick']} · {result['actions']} actions", 'kind': 'tick', 'events': farm.events})
     result['drones'] = [{'status': status, 'line': vm.line if vm else None} for status, vm in zip(statuses, planners)]
-    result['done'] = all(status == 'finished' for status in statuses)
+    result['done'] = challenges.terminal(result['state']) or all(status == 'finished' for status in statuses)
     if not result['done']:
         controllers = []
         try:

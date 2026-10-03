@@ -10,7 +10,7 @@ from .interpreter import run_script
 from .continuous import step_script
 from .team import step_team
 from .saves import validate_save
-from . import cultivation
+from . import cultivation, challenges, efficiency
 from .world import create_game, validate_game
 from .factory import CATALOG, MISSIONS as FACTORY_MISSIONS, new_factory, Factory
 
@@ -18,9 +18,10 @@ STATIC = Path(__file__).resolve().parent.parent / "static"
 EXAMPLES = STATIC.parent / "examples"
 ASSETS = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
           "/farm.js": ("farm.js", "text/javascript"), "/factory-ui.js": ("factory-ui.js", "text/javascript"), "/style.css": ("style.css", "text/css"),
-          "/cultivation-ui.js": ("cultivation-ui.js", "text/javascript"), "/favicon.svg": ("favicon.svg", "image/svg+xml")}
+          "/cultivation-ui.js": ("cultivation-ui.js", "text/javascript"), "/challenges-ui.js": ("challenges-ui.js", "text/javascript"), "/favicon.svg": ("favicon.svg", "image/svg+xml")}
 MAX_BODY = 100000
-MAX_SAVE_BODY = 600000
+MAX_SAVE_BODY = 1000000
+MAX_CONTROLLER_BODY = 600000
 
 
 class GameHandler(BaseHTTPRequestHandler):
@@ -63,7 +64,7 @@ class GameHandler(BaseHTTPRequestHandler):
             care_examples = {name: (EXAMPLES / f"{name}.py").read_text() for name in ("crop_care", "irrigation")}
             examples.update(care_examples); factory_examples.update(care_examples)
             return self.respond(200, {"state": new_state(), "crops": CROPS, "missions": MISSIONS, "examples": examples,
-                                     "cultivation": cultivation.RULES, "chapters": {"classic": {"title": "Home farm", "state": new_state(), "missions": MISSIONS, "examples": examples},
+                                     "challenges": challenges.CATALOG, "cultivation": cultivation.RULES, "chapters": {"classic": {"title": "Home farm", "state": new_state(), "missions": MISSIONS, "examples": examples},
                                                   "factory": {"title": "The Breadworks", "state": new_factory(), "missions": FACTORY_MISSIONS, "examples": factory_examples, "catalog": CATALOG}}})
         if path in ASSETS:
             filename, mime = ASSETS[path]
@@ -78,7 +79,7 @@ class GameHandler(BaseHTTPRequestHandler):
         try:
             path = urlsplit(self.path).path
             length = int(self.headers.get("Content-Length", "0"))
-            limit = MAX_SAVE_BODY if path in ("/api/save/validate", "/api/controller/step", "/api/team/step") else MAX_BODY
+            limit = MAX_SAVE_BODY if path == '/api/save/validate' else MAX_CONTROLLER_BODY if path in ('/api/controller/step', '/api/team/step') else MAX_BODY
             if not 0 < length <= limit:
                 return self.respond(413, {"error": f"Request must be between 1 and {limit:,} bytes."})
             payload = json.loads(self.rfile.read(length))
@@ -86,6 +87,16 @@ class GameHandler(BaseHTTPRequestHandler):
                 raise GameError("Expected a JSON object.")
             if path == "/api/save/validate":
                 return self.respond(200, {"save": validate_save(payload.get("save"))})
+            if path == '/api/challenge/start':
+                state = challenges.start(payload.get('id'), payload.get('drones'))
+                codes = [(EXAMPLES / f'challenge_{role}.py').read_text() for role in (('farmer', 'courier') if payload['drones'] == 2 else ('solo', 'courier'))]
+                return self.respond(200, {'state': state, 'codes': codes})
+            if path == '/api/efficiency/reset':
+                state = validate_game(payload.get('state'))
+                if state.get('scenario') != 'factory' or 'challenge' in state:
+                    raise GameError('Reset measurements in your Breadworks campaign between programs.')
+                state['efficiency'] = efficiency.new_window(state)
+                return self.respond(200, {'state': state, 'message': 'Efficiency measurement window restarted.'})
             if path == "/api/validate":
                 return self.respond(200, {"state": validate_game(payload.get("state"))})
             if path == "/api/controller/step":
@@ -103,6 +114,8 @@ class GameHandler(BaseHTTPRequestHandler):
                 return self.respond(200, {"state": farm.snapshot(), "message": message})
             if path == "/api/settings":
                 state = validate_game(payload.get("state"))
+                if 'challenge' in state:
+                    raise GameError('Growing options are fixed for this challenge. Return to your farm to change them.')
                 message = cultivation.configure(state, payload.get("settings"))
                 return self.respond(200, {"state": state, "message": message})
             if path == "/api/order":

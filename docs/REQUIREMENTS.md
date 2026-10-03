@@ -131,3 +131,19 @@ This milestone serves one drone and retains full snapshots. The following team m
 | E08 | Verification | Shared clock, resource conservation, rotating pad priority, deadline deliveries, invalid checkpoints, HTTP resume, browser controls, and sustained all-option starter runs. |
 
 Exact implemented semantics: [DRONE_TEAMS.md](DRONE_TEAMS.md). The broader feature comparison and ranked proposals are in [DESIGN_DIRECTION.md](DESIGN_DIRECTION.md); those proposals are not implemented APIs.
+
+
+## Efficiency and reproducible challenges — implemented 2026-10-03
+
+| ID | Requirement | Acceptance criterion |
+| --- | --- | --- |
+| G01 | Useful optimization feedback | Breadworks displays deliveries/100 ticks, tank water/loaf, empty travel, waits/transfers, and working/input-starved/output-full machine time. Every shared tick counts once. |
+| G02 | Comparable attempts | Three versioned fixed scenarios support one or two drones. Starting snapshots and rules are deterministic; records are separated by scenario and drone count. |
+| G03 | Real constraints | Rush: 12 bread/180 ticks; Waterwise: 12 bread/500 ticks/24 tank water; Full Buffers: 24 bread/240 ticks. Budget and target resolution automatically stops every execution mode. |
+| G04 | Independent campaign | Starting/retrying a trial preserves both campaigns. Return restores world/programs/speed; the trial can be reopened, reloaded paused, exported and imported. |
+| G05 | Experimentation | Retry preserves edited code and resets the fixed farm; campaign measurements can restart without advancing time. Fixed trial rules cannot be turned off to evade a budget. |
+| G06 | Personal progress | Best, last and previous resolved results persist; successful results rank by ticks, then water, then empty moves. Reload cannot double-count a resolved attempt. |
+| G07 | Runnable onboarding | Starter programs complete all six scenario/team combinations under the fixed budgets. |
+| G08 | Compatibility | Optional validated metrics/trial/record extensions retain old save and checkpoint hashes until measurement begins. Bounded Python and local hosting remain unchanged. |
+
+Exact rules, definitions, score bounds and schema are in [CHALLENGES.md](CHALLENGES.md). These measurements are totals, not time-series graphs; no online leaderboard, construction or new production recipe is included.

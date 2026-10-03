@@ -4,7 +4,7 @@
 
 Sprout is a playable, single-player browser game with a Python simulation. Write a short program, watch your drone work, earn harvest income, and improve your routine. The project runs locally with **no third-party dependencies**.
 
-**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. Breadworks includes an optional two-drone team, three reproducible challenges, and an efficiency dashboard. The [roadmap](docs/ROADMAP.md) distinguishes implemented mechanics from proposed conveyors and power.
+**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. Breadworks includes an optional two-drone team, three reproducible challenges, an efficiency dashboard, and optional residue → compost → fertilizer production. The [roadmap](docs/ROADMAP.md) distinguishes implemented mechanics from proposed conveyors and power.
 
 ## Quick start
 
@@ -60,6 +60,12 @@ Select **02 · The Breadworks** at the top of the game. Its starter program turn
 - Learn with four new examples: **First bread**, **Harvest & store**, **Farm to bakery**, and **Order runner**.
 
 This chapter supports solo bounded/continuous programs and an optional two-drone team. Conveyors, machine placement, and power grids remain future work. See the [Breadworks guide](docs/PLAYER_GUIDE.md#the-breadworks--factory-chapter).
+
+## Recycle your harvests
+
+In Breadworks, Stop your program and open **Crop recycling** below the production line. Enable it, then load **First recycled fertilizer**. Harvest residue collects at the well; drones feed a composter and choose between returning compost for soil care or supplying a mixer for fertilizer. Enable Soil health and/or Fertilizer to use the returned supplies.
+
+**Recycling autopilot** selects Continuous mode and handles the new chain alongside growing and bread deliveries. Live stock cards show full buffers and paused batches; two return goals track your progress. Turning recycling off pauses it and keeps your materials. All new cargo and machines support both drones; the supplied recycling example is solo. See [exact rules and transport API](docs/RECYCLING.md).
 
 ## Cooperate with two drones
 
@@ -127,7 +133,7 @@ Run from the project root:
 python3 -m unittest discover -s tests -v
 ```
 
-The 111 current Python tests cover both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, two-drone arbitration/conservation, fixed challenge budgets, old checkpoint compatibility, measurement accuracy, isolated trial saves, and HTTP endpoints. Tests use temporary loopback sockets. This milestone is validated locally on Python 3.12; prior milestones were also validated on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
+The Python regression suite covers both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, two-drone arbitration/conservation, fixed challenge budgets, old checkpoint compatibility, measurement accuracy, isolated trial saves, HTTP endpoints, and optional recycling conservation, machine reservations, stock limits, toggles and new solo/team save recovery. Tests use temporary loopback sockets. This milestone is validated locally on Python 3.12; prior milestones were also validated on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
 
 Optional JavaScript syntax checks, if Node.js is available (POSIX shell):
 
@@ -137,6 +143,7 @@ node --input-type=module --check < static/farm.js
 node --input-type=module --check < static/factory-ui.js
 node --input-type=module --check < static/cultivation-ui.js
 node --input-type=module --check < static/challenges-ui.js
+node --input-type=module --check < static/recycling-ui.js
 node tests/challenge_records.mjs
 ```
 
@@ -149,6 +156,7 @@ sprout/
 │   ├── engine.py           # State, crops, economy, missions, upgrades
 │   ├── cultivation.py      # Optional fertilizer, irrigation, soil care
 │   ├── factory.py          # Cargo, recipes, routes, delivery goals
+│   ├── recycling.py        # Optional conserved byproduct production
 │   ├── efficiency.py       # Shared-clock measurement windows
 │   ├── challenges.py       # Fixed trial rules and score validation
 │   ├── team.py             # Two bounded controllers, one clock
@@ -169,7 +177,7 @@ Completed, verified features and milestones are committed and pushed to `origin`
 
 ## Where the game could go next
 
-Cooperating drones, efficiency measurements and three reproducible challenges are implemented. The next proposed step is a conserved crop-byproduct production chain, followed by buildable logistics. Power, research, and larger fleets remain proposals. See the [reference-game research and design priorities](docs/DESIGN_DIRECTION.md).
+Cooperating drones, efficiency measurements, three reproducible challenges and a conserved crop-byproduct production chain are implemented. The next proposed step is buildable logistics: player-controlled placement, transport distance and storage targets. Power, research, and larger fleets remain proposals. See the [reference-game research and design priorities](docs/DESIGN_DIRECTION.md).
 
 Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/save design.
 
@@ -181,6 +189,7 @@ Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/s
 | [Player guide](docs/PLAYER_GUIDE.md) | Controls, examples, command API, and troubleshooting |
 | [Automation challenges](docs/CHALLENGES.md) | Fixed scenarios, measurements, personal records, and separate trial saves |
 | [Continuous automation](docs/CONTINUOUS.md) | Long-running programs, checkpoints, limits, and recovery |
+| [Crop recycling](docs/RECYCLING.md) | Byproduct recipes, transport, toggles, conservation, and examples |
 | [Crop care](docs/CROP_CARE.md) | Configurable systems, supplies, equipment, and automation API |
 | [Architecture](docs/ARCHITECTURE.md) | Modules, state, execution, storage, and limits |
 | [Roadmap](docs/ROADMAP.md) | Suggested improvements and programmable factory concept |

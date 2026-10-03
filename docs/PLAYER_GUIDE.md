@@ -227,3 +227,9 @@ Breadworks now includes three reproducible scenarios: **Bakery Rush**, **Waterwi
 Run the starter, inspect **Efficiency dashboard**, Stop to edit, then **Retry with my code**. Shorten empty routes, keep machine inputs stocked, collect products before buffers fill, and spend irrigation on crops that still need growth. One or two drones share the same clock. Use Continuous for Waterwise's 500-tick budget. Personal records separate team sizes and show changes between consecutive completed attempts.
 
 **Return to farm** restores your campaign; **View saved attempt** reopens the last trial. Stop first if its controller is paused or running. Reload/import restore trial controllers paused and completed results remain recorded once. **Restart measurement** resets only the campaign dashboard window, between programs. [Full rules, limits and starter results](CHALLENGES.md).
+
+## Crop recycling
+
+In Breadworks, Stop your program and enable **Crop recycling**, below the production line. Load **First recycled fertilizer** to harvest two plots and return one compost and two fertilizer. Each harvest now puts one residue in the supply well's bounded hopper; program drones to take it through the composter and optionally the mixer. Choose whether compost goes to soil care or fertilizer production. Enable the matching Growing option to consume returned supplies.
+
+**Recycling autopilot** selects Continuous mode and runs the bakery alongside the new chain. Inspect input/output cards and two return goals. Both drones can carry the new items; all six share cargo and chest space. Full outputs stall batches, and a full residue hopper blocks harvests. Turning recycling off pauses its machines, retains stock and permits transfers. Fixed challenges keep their original rules. [Exact recipes, examples, limits, API and save behavior](RECYCLING.md).

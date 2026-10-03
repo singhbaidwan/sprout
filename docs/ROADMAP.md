@@ -1,6 +1,6 @@
 # Roadmap — from a farm to a programmable factory
 
-**Updated:** 2026-10-03. **Playable today:** Home farm, the Breadworks production chapter, configurable crop care, continuous automation, two-drone Breadworks teams, and three measured automation challenges. Future stages below are proposals, not delivery commitments.
+**Updated:** 2026-10-03. **Playable today:** Home farm, the Breadworks production chapter, configurable crop care, continuous automation, two-drone Breadworks teams, three measured automation challenges, and an optional residue → compost → fertilizer chain. Future stages below are proposals, not delivery commitments.
 
 ## Direction
 
@@ -19,6 +19,7 @@ The initial inspiration was Factorio's emphasis on factories, infrastructure, re
 | 3 — Continuous operation | Optional resumable Python execution, one-action shared-clock boundary, bounded work, ordered browser updates, portable checkpoints, and two continuous examples. | One drone; reload/import restore paused. Deterministic retry and checkpoint tests pass, including all care combinations. [Rules and limitations](CONTINUOUS.md). |
 | 4 — Two-drone teams | Separate Python controllers and cargo; deterministic shared work; one clock; portable team checkpoints. | All care combinations sustain production. [Rules](DRONE_TEAMS.md). |
 | 4a — Efficiency and challenges | Shared-clock dashboard; Bakery Rush, Waterwise Harvest, Full Buffers; one/two-drone records; isolated trial saves and retry. | All six starters complete under fixed budgets. Old checkpoint hashes remain valid; campaign restores independently. [Rules](CHALLENGES.md). |
+| 4b — Crop recycling | Optional harvest residue, composter, fertilizer mixer, six-item cargo/chest, live stock and return goals, two examples. | Conserved materials, one shared phase, pause/resume, old checkpoint compatibility and all care combinations tested. [Rules](RECYCLING.md). |
 
 ```mermaid
 flowchart LR
@@ -48,7 +49,7 @@ The game now poses several distinct problems: a full drone cannot harvest; a ful
 | Stage | Deliverable | Completion check |
 | --- | --- | --- |
 | 4 — Logistics and building | Two-drone teams and efficiency scenarios delivered; next consider placeable machines, limited-capacity conveyors and saved routes. Physical movement conflicts are optional future scope. | Controllers cooperate without duplicate items, permanent starvation, or double-speed world time. Blueprints preserve validated layouts. |
-| 5 — Deeper production | Power, research, additional byproduct recipes, multiple recipes, varied contracts, throughput and idle-time graphs. | Players can see a bottleneck, change code, and measure improved output. |
+| 5 — Deeper production | Residue/compost/fertilizer delivered; later consider power, research, additional recipes, varied contracts and broader utilization graphs. | Players can see a bottleneck, change code, and measure improved output. |
 | 6 — Scale and sharing | Larger maps, script/blueprint sharing, performance profiling, then optional accounts and hosting. | Representative worlds meet performance budgets; public execution has an isolated deployment design. |
 
 These are independent milestones requiring scope decisions, rather than a promise to implement everything in sequence immediately. Completed authorized milestones are verified, documented, committed, and pushed before the next begins.
@@ -73,7 +74,7 @@ The current browser checks request tokens and checkpoint revisions, and checkpoi
 
 The version 2 portable envelope already holds independent chapter saves. Classic worlds remain version 1; Breadworks worlds use version 2 with an explicit scenario, inventories, machine progress, upgrades, and order state. Legacy single-farm envelopes migrate into classic mode.
 
-The optional team extension preserves old saves and checkpoints; see [DRONE_TEAMS.md](DRONE_TEAMS.md). The optional efficiency/trial/record extensions preserve campaigns and old checkpoints; see [CHALLENGES.md](CHALLENGES.md). Future schemas must explicitly migrate existing chapters, including ingredients already consumed by active batches. Continuous controllers now have versioned execution frames and paused reload behavior; old saves default to finite mode. Add migration fixtures before changing storage and retain a recoverable backup.
+The optional recycling extension preserves old item maps/checkpoints until enabled, retains paused batches and validates a conserved-material ledger; see [RECYCLING.md](RECYCLING.md). The optional team extension preserves old saves and checkpoints; see [DRONE_TEAMS.md](DRONE_TEAMS.md). The optional efficiency/trial/record extensions preserve campaigns and old checkpoints; see [CHALLENGES.md](CHALLENGES.md). Future schemas must explicitly migrate existing chapters, including ingredients already consumed by active batches. Continuous controllers now have versioned execution frames and paused reload behavior; old saves default to finite mode. Add migration fixtures before changing storage and retain a recoverable backup.
 
 Classic harvests sell immediately and classic scripts assume wrapped edges. Keep those semantics scoped to Home farm. Factory APIs and map rules must never silently reinterpret classic saves or tutorials.
 
@@ -82,7 +83,7 @@ Classic harvests sell immediately and classic scripts assume wrapped edges. Keep
 | Input | Possible chain | Programming challenge |
 | --- | --- | --- |
 | Sunflowers | Seeds → oil press → cooking oil | Share transport capacity with wheat. |
-| Crop residue | Industrial compost → fertilizer production | Extend the existing simple compost mechanic into a machine production chain. |
+| Crop residue — delivered | Residue → compost → fertilizer production | Split composter output between soil care and fertilizer. Additional fuel recipes remain proposed. |
 | Carrots | Washing → packing → delivery | Balance two lines supplying the same depot. |
 | Biomass | Fuel → generator → machine power | Prioritize machines when energy is scarce. |
 
@@ -97,4 +98,4 @@ Future configurable modules could add weather, pests, crop rotation bonuses, and
 
 ## Current design recommendation
 
-The two-drone team is implemented. Factorio / The Farmer Was Replaced research and a ranked proposal list are in [DESIGN_DIRECTION.md](DESIGN_DIRECTION.md). The efficiency dashboard and three reproducible contract scenarios are delivered; see [CHALLENGES.md](CHALLENGES.md). The next proposed bounded milestone is a conserved byproduct chain. New recipes and buildable logistics need their own scope decision and are not shipped features or callable APIs.
+The two-drone team is implemented. Factorio / The Farmer Was Replaced research and a ranked proposal list are in [DESIGN_DIRECTION.md](DESIGN_DIRECTION.md). The efficiency dashboard and three reproducible contract scenarios are delivered; see [CHALLENGES.md](CHALLENGES.md). The conserved residue → compost → fertilizer chain is delivered; see [RECYCLING.md](RECYCLING.md). The next proposed bounded milestone is player-controlled logistics, starting with validated machine placement or short conveyor segments. Those systems need a scope decision and are not shipped APIs.

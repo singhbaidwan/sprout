@@ -44,7 +44,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(len(data['examples']), 7)
         self.assertEqual(len(data['chapters']['factory']['missions']), 6)
         self.assertEqual(data['chapters']['factory']['state'], new_factory())
-        for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/cultivation-ui.js', '/challenges-ui.js', '/style.css', '/favicon.svg']:
+        self.assertEqual(data['chapters']['factory']['catalog']['recycling']['entities']['mixer']['output_amount'], 2)
+        self.assertIn('recycling_loop', data['chapters']['factory']['examples'])
+        for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/cultivation-ui.js', '/challenges-ui.js', '/recycling-ui.js', '/style.css', '/favicon.svg']:
             status, headers, body = self.request('GET', asset)
             self.assertEqual(status, 200)
             self.assertGreater(len(body), 100)
@@ -159,6 +161,29 @@ class ServerTests(unittest.TestCase):
         status, _, _ = self.request('POST', '/api/save/validate', {}, {'Content-Length': '1000001'})
         self.assertEqual(status, 413)
 
+    def test_recycling_endpoint_changes_option_without_advancing_or_changing_care(self):
+        state = new_factory()
+        status, _, body = self.request('POST', '/api/recycling', {'state': state, 'enabled': True})
+        self.assertEqual(status, 200)
+        enabled = json.loads(body)['state']
+        self.assertTrue(enabled['recycling']['enabled'])
+        self.assertEqual(enabled['tick'], 0); self.assertEqual(enabled['care'], state['care'])
+        status, _, body = self.request('POST', '/api/run', {'state': enabled, 'code': 'harvest()\nload("residue", 1)'})
+        self.assertEqual(status, 200)
+        result = json.loads(body); self.assertIsNone(result['error'])
+        carried = result['frames'][-1]['state']
+        self.assertEqual(carried['cargo']['residue'], 1)
+        status, _, body = self.request('POST', '/api/recycling', {'state': carried, 'enabled': False})
+        self.assertEqual(status, 200)
+        paused = json.loads(body)['state']
+        self.assertFalse(paused['recycling']['enabled'])
+        self.assertEqual(paused['tick'], carried['tick']); self.assertEqual(paused['cargo'], carried['cargo'])
+        status, _, body = self.request('POST', '/api/validate', {'state': paused})
+        self.assertEqual(status, 200)
+        for payload in ({'state': state, 'enabled': 'on'}, {'state': state}, {'state': new_state(), 'enabled': True}):
+            status, _, _ = self.request('POST', '/api/recycling', payload)
+            self.assertEqual(status, 400)
+
     def test_challenge_endpoints_lock_rules_and_support_both_drone_counts(self):
         for drones in (1, 2):
             status, _, body = self.request('POST', '/api/challenge/start', {'id': 'waterwise', 'drones': drones})
@@ -172,7 +197,7 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertIsNone(json.loads(body)['error'])
             for endpoint, values in [('/api/settings', {'settings': {'fertilizer': False, 'irrigation': False, 'soil': False}}),
-                                     ('/api/unlock', {'item': 'cargo'}), ('/api/order', {}), ('/api/efficiency/reset', {})]:
+                                     ('/api/unlock', {'item': 'cargo'}), ('/api/order', {}), ('/api/efficiency/reset', {}), ('/api/recycling', {'enabled': True})]:
                 status, _, _ = self.request('POST', endpoint, dict(state=state, **values))
                 self.assertEqual(status, 400)
             wrong = {'state': state, 'codes': ['wait()', 'wait()']} if drones == 1 else {'state': state, 'code': 'wait()'}

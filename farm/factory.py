@@ -2,7 +2,7 @@
 
 from collections import deque
 
-from . import cultivation, efficiency, challenges
+from . import cultivation, efficiency, challenges, recycling
 from .engine import Farm, GameError, STAT_NAMES, empty_tile, integer, validate_state
 
 ITEMS = ("wheat", "flour", "bread")
@@ -29,12 +29,12 @@ MISSIONS = [
 FACTORY_STATS = STAT_NAMES + ("flour_milled", "bread_baked", "bread_delivered")
 ORDER = {"target": 12, "deadline": 180, "reward": 40, "unlock": 4}
 CATALOG = {"entities": ENTITIES, "obstacles": OBSTACLES, "upgrades": UPGRADES,
-           "field": {"width": 6, "height": 4}, "cargo_capacity": 8, "harvest_yield": 3, "order": ORDER}
+           "field": {"width": 6, "height": 4}, "cargo_capacity": 8, "harvest_yield": 3, "order": ORDER, "recycling": recycling.RULES}
 DIRECTIONS = {"east": (1, 0), "south": (0, 1), "west": (-1, 0), "north": (0, -1)}
 
 
-def inventory():
-    return dict.fromkeys(ITEMS, 0)
+def inventory(with_recycling=False):
+    return dict.fromkeys(ITEMS + (recycling.ITEMS if with_recycling else ()), 0)
 
 
 def new_factory():
@@ -77,8 +77,9 @@ def validate_factory(raw):
         if not isinstance(upgrades, list) or len(upgrades) > 3 or any(type(item) is not str or item not in ("cargo", "mill", "oven") for item in upgrades) or len(set(upgrades)) != len(upgrades):
             raise GameError("Invalid factory upgrades.")
         state.update(version=2, scenario="factory", upgrades=list(upgrades))
+        items = ITEMS + (recycling.ITEMS if "recycling" in raw else ())
         for key, capacity in (("cargo", 16 if "cargo" in upgrades else 8), ("chest", 48)):
-            state[key] = {item: integer(raw[key][item], 0, capacity, key) for item in ITEMS}
+            state[key] = {item: integer(raw[key][item], 0, capacity, key) for item in items}
             if sum(state[key].values()) > capacity:
                 raise GameError(f"Saved {key} exceeds its capacity.")
         # Optional extension: old worlds and controller digests stay unchanged.
@@ -87,7 +88,7 @@ def validate_factory(raw):
             if not isinstance(team, dict) or type(team.get("version")) is not int or team["version"] != 1:
                 raise GameError("Invalid drone team version.")
             drone = {axis: integer(team["drone"][axis], 0, 7, "second drone position") for axis in ("x", "y")}
-            cargo = {item: integer(team["cargo"][item], 0, 16, "second drone cargo") for item in ITEMS}
+            cargo = {item: integer(team["cargo"][item], 0, 16, "second drone cargo") for item in items}
             if not walkable(**drone) or sum(cargo.values()) > (16 if "cargo" in upgrades else 8):
                 raise GameError("The second drone has an invalid position or cargo capacity.")
             state["team"] = {"version": 1, "drone": drone, "cargo": cargo}
@@ -124,6 +125,8 @@ def validate_factory(raw):
         delivered = state["stats"]["bread_delivered"] - order["start_delivered"]
         if order["status"] == "active" and (elapsed >= ORDER["deadline"] or delivered >= ORDER["target"]):
             raise GameError("This active order should already be resolved.")
+        if "recycling" in raw:
+            state["recycling"] = recycling.validate(raw["recycling"], state)
         if "efficiency" in raw:
             state["efficiency"] = efficiency.validate(raw["efficiency"], state)
         if "challenge" in raw:
@@ -143,28 +146,38 @@ class Factory(Farm):
     def cargo_space(self):
         return (16 if "cargo" in self.state["upgrades"] else 8) - sum(self.state["cargo"].values())
 
+    def entities(self):
+        return dict(ENTITIES, **recycling.ENTITIES) if "recycling" in self.state else ENTITIES
+
+    def machines(self):
+        return dict(self.state["machines"], **self.state['recycling']['machines']) if 'recycling' in self.state else self.state['machines']
+
     def entity_here(self):
-        return next((name for name, entity in ENTITIES.items() if all(self.state["drone"][axis] == entity[axis] for axis in ("x", "y"))), None)
+        return next((name for name, entity in self.entities().items() if all(self.state["drone"][axis] == entity[axis] for axis in ("x", "y"))), None)
 
     def machine_status(self, name):
-        if type(name) is not str or name not in self.state["machines"]:
-            raise GameError('Choose machine_status("mill") or machine_status("oven").')
-        machine, definition = self.state["machines"][name], ENTITIES[name]
+        if type(name) is not str or name not in self.machines():
+            raise GameError('Choose a machine: mill, oven, or an installed composter/mixer.')
+        machine, definition = self.machines()[name], self.entities()[name]
+        if name in ('composter', 'mixer') and not recycling.enabled(self.state):
+            return "paused"
         if machine["remaining"]:
             return "working"
-        if machine["output"] >= definition["output_capacity"]:
+        if machine["output"] + definition.get('output_amount', 1) > definition["output_capacity"]:
             return "output_full"
         return "waiting_input" if machine["input"] < definition["amount"] else "ready"
 
     def stored(self, entity, item):
         self.check_item(item)
-        if type(entity) is not str or entity not in ENTITIES:
-            raise GameError('Choose "chest", "mill", "oven", or "depot".')
+        if type(entity) is not str or entity not in self.entities():
+            raise GameError('Choose an installed building. Enable recycling for well, composter and mixer.')
         if entity == "chest":
             return self.state["chest"][item]
         if entity == "depot":
             return 0
-        definition, machine = ENTITIES[entity], self.state["machines"][entity]
+        if entity == 'well':
+            return self.state['recycling']['residue'] if item == 'residue' else self.state['care'].get(item, 0) if item in ('compost', 'fertilizer') else 0
+        definition, machine = self.entities()[entity], self.machines()[entity]
         if item == definition["ingredient"]:
             return machine["input"]
         if item == definition["product"]:
@@ -175,23 +188,25 @@ class Factory(Farm):
         self.check_item(item)
         if entity == "chest":
             return 48 - sum(self.state["chest"].values())
-        if type(entity) is not str or entity not in ("mill", "oven"):
-            raise GameError('Check free_space("chest", item), "mill", or "oven".')
-        definition = ENTITIES[entity]
-        return definition["input_capacity"] - self.state["machines"][entity]["input"] if item == definition["ingredient"] else 0
+        if entity == 'well' and 'recycling' in self.state:
+            limits = {'residue': recycling.RULES['hopper_capacity'], 'compost': 1000, 'fertilizer': cultivation.RULES['fertilizer_limit']}
+            return limits[item] - self.stored(entity, item) if item in limits else 0
+        if type(entity) is not str or entity not in self.machines():
+            raise GameError('Check input space at the chest, well, or an installed machine.')
+        definition = self.entities()[entity]
+        return definition["input_capacity"] - self.machines()[entity]["input"] if item == definition["ingredient"] else 0
 
-    @staticmethod
-    def check_item(item):
-        if type(item) is not str or item not in ITEMS:
-            raise GameError('Choose "wheat", "flour", or "bread".')
+    def check_item(self, item):
+        if type(item) is not str or item not in self.state['cargo']:
+            raise GameError('Choose wheat, flour, bread, or enable recycling for residue, compost and fertilizer.')
 
     def route(self, *args):
-        if len(args) == 1 and type(args[0]) is str and args[0] in ENTITIES:
-            target = (ENTITIES[args[0]]["x"], ENTITIES[args[0]]["y"])
+        if len(args) == 1 and type(args[0]) is str and args[0] in self.entities():
+            target = (self.entities()[args[0]]["x"], self.entities()[args[0]]["y"])
         elif len(args) == 2:
             target = tuple(integer(arg, 0, 7, "destination") for arg in args)
         else:
-            raise GameError('Use navigate_to("chest"), "mill", "oven", "depot", or navigate_to(x, y).')
+            raise GameError('Use navigate_to("chest"), "mill", "oven", "depot", an installed recycling building, or navigate_to(x, y).')
         if not walkable(*target):
             raise GameError("That destination is blocked by a rock.")
         start = (self.state["drone"]["x"], self.state["drone"]["y"])
@@ -238,6 +253,7 @@ class Factory(Farm):
             elif elapsed >= ORDER["deadline"]:
                 order["status"] = "failed"
                 self.events.append("Order expired. Your stock and deliveries are kept. Try another route!")
+        recycling.advance(s, self.events)
         challenges.advance(s, self.events)
 
     def action_context(self):
@@ -292,10 +308,12 @@ class Factory(Farm):
                     raise GameError(f"Not enough {item} at {entity}.")
                 if entity == "chest":
                     source, key = s["chest"], item
-                elif entity in ("mill", "oven") and item == ENTITIES[entity]["product"]:
-                    source, key = s["machines"][entity], "output"
+                elif entity == 'well' and item == 'residue':
+                    source, key = s['recycling'], 'residue'
+                elif entity in self.machines() and item == self.entities()[entity]["product"]:
+                    source, key = self.machines()[entity], "output"
                 else:
-                    raise GameError("Only finished products can be loaded from a machine.")
+                    raise GameError("Load finished machine products, chest stock, or residue at the well. Returned care supplies stay in the shed.")
                 source[key] -= amount
                 s["cargo"][item] += amount
             else:
@@ -312,8 +330,14 @@ class Factory(Farm):
                         raise GameError(f"Not enough input space for {item} at {entity}.")
                     if entity == "chest":
                         s["chest"][item] += amount
+                    elif entity == 'well':
+                        if item == 'residue':
+                            s['recycling']['residue'] += amount
+                        else:
+                            s['care'][item] += amount
+                            s['recycling']['stats'][item + '_returned'] += amount
                     else:
-                        s["machines"][entity]["input"] += amount
+                        self.machines()[entity]["input"] += amount
                 s["cargo"][item] -= amount
             message = f"{'Loaded' if name == 'load' else 'Unloaded'} {amount} {item} at {entity}"
         elif name in ("harvest", "till", "plant", "water"):
@@ -325,11 +349,13 @@ class Factory(Farm):
                 raise GameError("harvest() takes no arguments.")
             if not self.ready():
                 raise GameError("Nothing ripe here. Water wheat, then work elsewhere or wait().")
+            recycling.check_harvest(s)
             amount = cultivation.harvest_yield(s)
             if self.cargo_space() < amount:
                 raise GameError(f'A harvest needs {amount} cargo slots. Unload wheat at the chest or mill.')
             s["cargo"]["wheat"] += amount
             cultivation.harvested(s, "wheat")
+            recycling.harvested(s)
             s["stats"]["harvested"] += 1
             self.tile.update(crop=None, growth=0)
             message = f"Harvested {amount} wheat into drone cargo"

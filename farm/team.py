@@ -14,7 +14,7 @@ from . import challenges
 def enable_team(state):
     state = validate_factory(state)
     state.setdefault('team', {'version': 1, 'drone': {'x': 0, 'y': 6},
-                              'cargo': inventory(), 'actions': [0, 0], 'blocked': [0, 0]})
+                              'cargo': inventory('recycling' in state), 'actions': [0, 0], 'blocked': [0, 0]})
     return state
 
 

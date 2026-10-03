@@ -41,7 +41,7 @@ Sprinklers run during all drone actions, including factory deliveries, and stop 
 
 ## Soil nutrients and compost
 
-Each plot starts at 100 nutrients. Harvesting with Soil health enabled removes nutrients according to the crop: wheat 20, carrots 30, sunflowers 15. The same harvest adds one compost, representing crop residue, to a shared supply capped at 1,000.
+Each plot starts at 100 nutrients. Harvesting with Soil health enabled removes nutrients according to the crop: wheat 20, carrots 30, sunflowers 15. The same harvest adds one compost, representing crop residue, to a shared supply capped at 1,000. With optional Breadworks recycling enabled, instant compost is replaced by residue in the well hopper; return manufactured compost to use it for soil care. Recycling can collect residue with Soil health off as well. [Recycling rules](RECYCLING.md).
 
 Below 30 nutrients, crops only grow on even-numbered world ticks. They still need moisture; they never die. This makes depleted soil slower without creating a permanent dead end.
 
@@ -94,4 +94,4 @@ World schemas retain their existing chapter versions and gain a versioned `care`
 
 The requested reference, [The Farmer Was Replaced's Steam description](https://store.steampowered.com/app/2060160/The_Farmer_Was_Replaced/), emphasizes gradual introduction of programming, resource-funded technology, and continuous progression. Sprout uses those broad lessons for its own optional care systems and production chain. The mechanics and numbers above are original game rules; the store description was not used as evidence that the reference implements these exact systems.
 
-Continuous controllers, weather, pests, crop diseases, and industrial compost/fertilizer production remain possible later additions. They are not implemented by these toggles.
+Continuous controllers and optional industrial compost/fertilizer production are implemented separately; see [CONTINUOUS.md](CONTINUOUS.md) and [RECYCLING.md](RECYCLING.md). Weather, pests and crop diseases remain proposals. Existing care examples do not transport recycling output; use Recycling autopilot or customize your program when that module is enabled.

@@ -75,3 +75,7 @@ The original continuous scheduler serves one drone. The implemented team extensi
 ## Optional team mode
 
 Breadworks also offers **Drone team (2)**. It reuses these bounded VM continuations, one per drone, with a separate shared-tick scheduler. One team Step can perform two commands while advancing the world only once. Both programs save together and reload paused. See [DRONE_TEAMS.md](DRONE_TEAMS.md) for the implemented endpoint, schema, arbitration and solo compatibility rules.
+
+## Optional recycling controller
+
+Breadworks offers **Recycling autopilot**, which automatically selects Continuous mode. Enable Crop recycling before running it; enable Soil health/Fertilizer to consume the produced supplies. It handles the bakery and the composter/mixer chain in one solo program. The original Continuous autopilot does not transport byproducts. Both use the same bounded VM, portable checkpoints and paused recovery; new material inventories are preserved. [Recipes and controller limits](RECYCLING.md).

@@ -1,4 +1,6 @@
 // Original canvas scene: all world objects are game-native vector geometry.
+import { factoryEntities } from './recycling-ui.js';
+
 export class FarmRenderer {
   constructor(canvas, onSelect) {
     this.canvas = canvas;
@@ -40,7 +42,7 @@ export class FarmRenderer {
     this.layout();
     if (first || this.reduced.matches || Math.abs(this.drone.x - state.drone.x) > 2 || Math.abs(this.drone.y - state.drone.y) > 2) this.drone = { ...state.drone };
     if (action === 'harvest' || action === 'water' || action === 'plant') this.effect = { action, x: state.drone.x, y: state.drone.y, start: performance.now() };
-    this.canvas.setAttribute('aria-label', `${state.scenario === 'factory' ? 'Breadworks with chest, mill, oven, and delivery depot. ' : ''}${state.size} by ${state.size} farm. Drone at ${state.drone.x}, ${state.drone.y}. ${state.stats.harvested} crops harvested. ${state.team ? `Drone 2 at ${state.team.drone.x}, ${state.team.drone.y}. ` : ''}Use Inspect plots for details.`);
+    this.canvas.setAttribute('aria-label', `${state.scenario === 'factory' ? `Breadworks with chest, mill, oven, delivery depot${state.recycling ? ', supply well, composter, and fertilizer mixer' : ''}. ` : ''}${state.size} by ${state.size} farm. Drone at ${state.drone.x}, ${state.drone.y}. ${state.stats.harvested} crops harvested. ${state.team ? `Drone 2 at ${state.team.drone.x}, ${state.team.drone.y}. ` : ''}Use Inspect plots for details.`);
     this.draw(performance.now());
   }
   point(x, y) { return { x: this.originX + (x - y) * this.unit, y: this.originY + (x + y) * this.half }; }
@@ -139,7 +141,15 @@ export class FarmRenderer {
   }
   building(name, p, time) {
     const c = this.ctx, u = this.unit, z = u * .55;
-    const colors = {chest: ['#b39463','#8c734d','#d3b67e'], mill: ['#dbd9bc','#aaa98c','#7f987f'], oven: ['#c99173','#996e57','#d3ad87'], depot: ['#99b3a0','#6a8975','#cbd7ba']}[name];
+    if (name === 'well') {
+      // The well shares a growing plot: keep its equipment small and off-center.
+      const x = p.x + u*.43, y = p.y - u*.32;
+      this.ellipse(x,y,u*.18,u*.09,'#a4c3c4');
+      this.line(x,y,x,y-u*.48,'#56868b',3);
+      this.line(x-u*.12,y-u*.48,x+u*.16,y-u*.48,'#b9ded9',2);
+      return;
+    }
+    const colors = {chest: ['#b39463','#8c734d','#d3b67e'], mill: ['#dbd9bc','#aaa98c','#7f987f'], oven: ['#c99173','#996e57','#d3ad87'], depot: ['#99b3a0','#6a8975','#cbd7ba'], composter: ['#8ca16e','#627c50','#bdcb92'], mixer: ['#90b2b5','#5f8991','#c0d8cf']}[name];
     this.diamond(p.x,p.y,u*.9,this.half*.85,'#ecebd9','#b8baa0');
     this.polygon([[p.x-z,p.y-z*.4],[p.x,p.y],[p.x,p.y-z],[p.x-z,p.y-z*1.4]], colors[0]);
     this.polygon([[p.x,p.y],[p.x+z,p.y-z*.4],[p.x+z,p.y-z*1.4],[p.x,p.y-z]],colors[1]);
@@ -156,6 +166,17 @@ export class FarmRenderer {
     } else if(name==='chest') {
       this.line(p.x-z*.55,p.y-z*1.5,p.x-z*.55,p.y-z*.6,'#eee2af',2);
       this.line(p.x+z*.55,p.y-z*1.5,p.x+z*.55,p.y-z*.6,'#eee2af',2);
+    } else if (name === 'composter') {
+      this.ellipse(p.x,p.y-z*1.5,z*.45,z*.18,'#665b43');
+      this.ellipse(p.x-z*.1,p.y-z*1.6,z*.19,z*.09,'#cfe6a3');
+      this.line(p.x-z*.6,p.y-z*.9,p.x-z*.15,p.y-z*.72,'#d9e5b6',2);
+    } else if (name === 'mixer') {
+      const active = this.state.recycling.enabled && this.state.recycling.machines.mixer.remaining;
+      const angle = active && !this.reduced.matches ? time/400 : .6;
+      const y = p.y-z*1.5;
+      this.ellipse(p.x,y,z*.6,z*.23,'#e3eee1');
+      this.line(p.x-Math.cos(angle)*z*.5,y-Math.sin(angle)*z*.18,p.x+Math.cos(angle)*z*.5,y+Math.sin(angle)*z*.18,'#59838a',2);
+      this.ellipse(p.x,y,2,2,'#496d73');
     } else {
       this.line(p.x-z*.65,p.y-z*.3,p.x-z*.65,p.y-z*2.5,'#6b8068',2);
       this.polygon([[p.x-z*.65,p.y-z*2.5],[p.x+z*.05,p.y-z*2.3],[p.x-z*.65,p.y-z*1.9]],'#d9be79');
@@ -165,6 +186,7 @@ export class FarmRenderer {
     if (!this.width || !this.state) return;
     this.scene(time);
     const c = this.ctx, s = this.state, u = this.unit, v = this.half, n = s.size;
+    const entities = s.scenario === 'factory' ? factoryEntities(s, this.catalog) : {};
     const top = this.point(0, 0), right = this.point(n, 0), bottom = this.point(n, n), left = this.point(0, n);
     this.polygon([[left.x-9,left.y+7],[bottom.x,bottom.y+14],[right.x+12,right.y+9],[bottom.x+3,bottom.y+23]], '#76905524');
     this.polygon([[left.x-5,left.y],[bottom.x,bottom.y+5],[bottom.x,bottom.y+14],[left.x-5,left.y+9]], '#a3b57e');
@@ -196,7 +218,7 @@ export class FarmRenderer {
         this.polygon([[p.x-u*.5,p.y],[p.x-u*.35,p.y-u*.6],[p.x+u*.2,p.y-u*.7],[p.x+u*.5,p.y-u*.1],[p.x+u*.1,p.y+u*.2]], '#969e88', '#828c77');
         this.line(p.x-u*.35,p.y-u*.6,p.x+u*.05,p.y-u*.3,'#b6bca4',2);
       }
-      if (factory) for (const [name,entity] of Object.entries(this.catalog.entities)) {
+      if (factory) for (const [name,entity] of Object.entries(entities)) {
         if(entity.x===x && entity.y===y) this.building(name,p,time);
       }
       if (tile.crop) {
@@ -218,12 +240,13 @@ export class FarmRenderer {
       if(s.care.plots[i].fertilized) {const p=this.point(i%n+.5,Math.floor(i/n)+.5);this.ellipse(p.x+u*.42,p.y-8,2.5,2.5,'#f2de95');}
     }
     // Labels sit above the finished ground layer so foreground tiles cannot erase them.
-    if(s.scenario==='factory') for(const [name,entity] of Object.entries(this.catalog.entities)) {
+    if(s.scenario==='factory') for(const [name,entity] of Object.entries(entities)) {
       const p=this.point(entity.x+.5,entity.y+.5);
       c.font='600 '+Math.max(9,Math.min(11,u*.48))+'px ui-monospace, monospace';c.textAlign='center';
       const width=c.measureText(name).width+12;
-      c.fillStyle='#f9f9ecee';c.fillRect(p.x-width/2,p.y+v*.7,width,16);
-      c.fillStyle='#4d6249';c.fillText(name,p.x,p.y+v*.7+11);
+      const labelY = p.y + v*.7 + (name === 'composter' ? 18 : 0);
+      c.fillStyle='#f9f9ecee';c.fillRect(p.x-width/2,labelY,width,16);
+      c.fillStyle='#4d6249';c.fillText(name,p.x,labelY+11);
     }
     // Coordinate markers along the two near field edges.
     c.font = `${Math.max(9, Math.min(11, u*.35))}px ui-monospace, monospace`; c.fillStyle = '#92a177'; c.textAlign = 'center';

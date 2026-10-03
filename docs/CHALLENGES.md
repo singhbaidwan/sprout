@@ -66,3 +66,5 @@ Implemented HTTP endpoints:
 | `POST /api/efficiency/reset` | `{state}` | Campaign state with a fresh window and a message |
 
 Bootstrap includes the challenge catalog. Save validation now permits up to 1,000,000 request bytes; browser imports permit files up to 990 KB. Controller/team requests retain their 600,000-byte limit, other requests 100,000. The interpreter allowlist, operation/memory quotas and loopback hosting boundary remain unchanged. Future rule changes need an explicit scenario-version/record migration; do not mix scores from different definitions.
+
+Optional campaign recycling is excluded from all version 1 trial worlds, including its disabled extension. The configuration endpoint rejects changes during trials, so the six starter baselines and comparable records retain their original item catalog and clock. Campaign measurements include all cargo when counting empty moves and transfers; mill/oven utilization graphs still describe bakery machines only. [Campaign recycling rules](RECYCLING.md).

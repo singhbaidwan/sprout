@@ -147,3 +147,20 @@ Exact implemented semantics: [DRONE_TEAMS.md](DRONE_TEAMS.md). The broader featu
 | G08 | Compatibility | Optional validated metrics/trial/record extensions retain old save and checkpoint hashes until measurement begins. Bounded Python and local hosting remain unchanged. |
 
 Exact rules, definitions, score bounds and schema are in [CHALLENGES.md](CHALLENGES.md). These measurements are totals, not time-series graphs; no online leaderboard, construction or new production recipe is included.
+
+## Optional crop recycling — implemented 2026-10-03
+
+| ID | Requirement | Acceptance |
+| --- | --- | --- |
+| R01 | Configurable campaign module | Breadworks switch defaults off; change only between programs; classic/trials reject configuration. Existing care toggles stay independent. |
+| R02 | Useful harvest byproduct | One residue per enabled harvest goes into the 48-item well hopper; no extra cargo slot; no instant soil compost duplication. Full hopper rejects atomically. |
+| R03 | Two buffered recipes | Composter: 2 residue → 2 compost / 6 ticks. Mixer: 1 compost → 2 fertilizer / 4 ticks. Both have 12 input / 8 output and reserve two output slots. |
+| R04 | Player-controlled transport | Existing load/unload/navigation/query calls support three new items and pads. Shared 8/16 cargo and 48 chest capacities; every transfer is atomic. No automatic transport. |
+| R05 | Production choice | Return compost for 40 soil nutrients or supply mixer for two fertilizer doses. Returned products enter shared care stock; bought/initial supplies cannot be loaded back out. |
+| R06 | Visible diagnosis | Toggle, named map buildings, buffer/status/progress cards, lifetime totals, two non-reward return goals and an in-game reference. |
+| R07 | One shared clock | Both new machines advance once after committed actions, regardless of drone count; paused/offline time adds no ticks. |
+| R08 | Pause and recovery | Disable keeps stock and exact remaining batch time; transfers still work; re-enable resumes. Portable solo/team continuations retain items and batches. |
+| R09 | Compatible conserved saves | Optional versioned extension; old item maps and checkpoint digests remain unchanged until enablement. Ledger includes stock, active ingredients and cumulative exports; malformed/lost/duplicated material fails validation. |
+| R10 | Playable examples | Finite first-fertilizer demo and Continuous bakery/recycler controller; all eight growing-option combinations pass. Existing bakery and six challenge starters remain playable. |
+
+Exact operational limits and schema are in [RECYCLING.md](RECYCLING.md). Original crop-care requirement C05 retains instant compost except when this independent module is on. Placeable buildings, conveyors, fuel/power and extra recipes remain proposals rather than implemented APIs.

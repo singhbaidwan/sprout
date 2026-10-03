@@ -132,7 +132,8 @@ def harvested(state, crop):
         care['stats']['bonus'] += 1
     if care['settings']['soil']:
         plot['nutrients'] = max(0, plot['nutrients'] - {'wheat': 20, 'carrot': 30, 'sunflower': 15}[crop])
-        care['compost'] = min(1000, care['compost'] + 1)
+        if not state.get('recycling', {}).get('enabled', False):
+            care['compost'] = min(1000, care['compost'] + 1)
     plot.update(boost=0, fertilized=False)
 
 
@@ -171,7 +172,7 @@ def action(farm, name, args):
         return 'Fed crop · faster growth and a richer harvest'
     if name == 'compost':
         if not care['compost']:
-            raise GameError('No compost yet. Harvest crops with Soil health on to collect residue.')
+            raise GameError('No compost yet. Harvest with Soil health on, or return composter output to the well when recycling is enabled.')
         if plot['nutrients'] == 100:
             raise GameError('This soil already has full nutrients.')
         care['compost'] -= 1; care['stats']['composted'] += 1
@@ -209,6 +210,8 @@ def query(state, name, args):
         raise GameError(f'{name}() expects {arity} arguments.')
     care, plot = state['care'], state['care']['plots'][position(state)]
     if name == 'feature_enabled':
+        if args[0] == 'recycling' and state.get('scenario') == 'factory':
+            return state.get('recycling', {}).get('enabled', False)
         if type(args[0]) is not str or args[0] not in FEATURES:
             raise GameError('Choose fertilizer, irrigation, or soil.')
         return care['settings'][args[0]]

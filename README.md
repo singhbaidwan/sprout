@@ -4,7 +4,7 @@
 
 Sprout is a playable, single-player browser game with a Python simulation. Write a short program, watch your drone work, earn harvest income, and improve your routine. The project runs locally with **no third-party dependencies**.
 
-**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. Breadworks includes an optional two-drone team, three reproducible challenges, an efficiency dashboard, and optional residue → compost → fertilizer production. The [roadmap](docs/ROADMAP.md) distinguishes implemented mechanics from proposed conveyors and power.
+**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. Breadworks includes an optional two-drone team, three reproducible challenges, an efficiency dashboard, optional residue → compost → fertilizer production, and saved workshop layouts. The [roadmap](docs/ROADMAP.md) distinguishes implemented mechanics from proposed conveyors and power.
 
 ## Quick start
 
@@ -59,7 +59,13 @@ Select **02 · The Breadworks** at the top of the game. Its starter program turn
 - Complete six factory missions, purchase three upgrades, and deliver timed orders to beat your personal record.
 - Learn with four new examples: **First bread**, **Harvest & store**, **Farm to bakery**, and **Order runner**.
 
-This chapter supports solo bounded/continuous programs and an optional two-drone team. Conveyors, machine placement, and power grids remain future work. See the [Breadworks guide](docs/PLAYER_GUIDE.md#the-breadworks--factory-chapter).
+This chapter supports solo bounded/continuous programs, an optional two-drone team, and movable workshop machines. Conveyors, additional machine construction, and power grids remain future work. See the [Breadworks guide](docs/PLAYER_GUIDE.md#the-breadworks--factory-chapter).
+
+## Design your workshop
+
+Stop your Breadworks program and open **Workshop layout** below the map. Move the mill, oven and installed recycling machines onto valid lane pads. Preview route distances, try **Compact workshop**, then **Apply layout**. Moves keep stock and active batches and cost no coins or ticks. Named Python routes follow the machines. Finish an active order before applying; challenges keep fixed maps.
+
+Use **Layout delivery test** to compare the same four-loaf program: on a fresh farm, defaults take 54 ticks and the compact preset takes 48. Export a save to compare identical worlds. [Placement rules, saves and measurements](docs/LAYOUTS.md).
 
 ## Recycle your harvests
 
@@ -133,7 +139,7 @@ Run from the project root:
 python3 -m unittest discover -s tests -v
 ```
 
-The Python regression suite covers both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, two-drone arbitration/conservation, fixed challenge budgets, old checkpoint compatibility, measurement accuracy, isolated trial saves, HTTP endpoints, and optional recycling conservation, machine reservations, stock limits, toggles and new solo/team save recovery. Tests use temporary loopback sockets. This milestone is validated locally on Python 3.12; prior milestones were also validated on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
+The Python regression suite covers both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, two-drone arbitration/conservation, fixed challenge budgets, old checkpoint compatibility, measurement accuracy, isolated trial saves, HTTP endpoints, and optional recycling conservation, machine reservations, stock limits, toggles new solo/team save recovery, atomic machine placement, moved routes, and layout-aware controllers. Tests use temporary loopback sockets. This milestone is validated locally on Python 3.12; prior milestones were also validated on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
 
 Optional JavaScript syntax checks, if Node.js is available (POSIX shell):
 
@@ -144,7 +150,10 @@ node --input-type=module --check < static/factory-ui.js
 node --input-type=module --check < static/cultivation-ui.js
 node --input-type=module --check < static/challenges-ui.js
 node --input-type=module --check < static/recycling-ui.js
+node --input-type=module --check < static/layout-rules.js
+node --input-type=module --check < static/layout-ui.js
 node tests/challenge_records.mjs
+node tests/layout_rules.mjs
 ```
 
 There is no build step or hot reload. After changing browser files, reload the page. Restart the Python process after changing backend files.
@@ -157,6 +166,7 @@ sprout/
 │   ├── cultivation.py      # Optional fertilizer, irrigation, soil care
 │   ├── factory.py          # Cargo, recipes, routes, delivery goals
 │   ├── recycling.py        # Optional conserved byproduct production
+│   ├── layout.py           # Atomic machine placement and optional save schema
 │   ├── efficiency.py       # Shared-clock measurement windows
 │   ├── challenges.py       # Fixed trial rules and score validation
 │   ├── team.py             # Two bounded controllers, one clock
@@ -177,7 +187,7 @@ Completed, verified features and milestones are committed and pushed to `origin`
 
 ## Where the game could go next
 
-Cooperating drones, efficiency measurements, three reproducible challenges and a conserved crop-byproduct production chain are implemented. The next proposed step is buildable logistics: player-controlled placement, transport distance and storage targets. Power, research, and larger fleets remain proposals. See the [reference-game research and design priorities](docs/DESIGN_DIRECTION.md).
+Cooperating drones, efficiency measurements, challenges, crop recycling and machine layout planning are implemented. The next proposed logistics step is limited-capacity conveyors or storage targets. Extra machines, power, research, and larger fleets remain proposals. See the [reference-game research and design priorities](docs/DESIGN_DIRECTION.md).
 
 Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/save design.
 
@@ -190,6 +200,7 @@ Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/s
 | [Automation challenges](docs/CHALLENGES.md) | Fixed scenarios, measurements, personal records, and separate trial saves |
 | [Continuous automation](docs/CONTINUOUS.md) | Long-running programs, checkpoints, limits, and recovery |
 | [Crop recycling](docs/RECYCLING.md) | Byproduct recipes, transport, toggles, conservation, and examples |
+| [Workshop layouts](docs/LAYOUTS.md) | Movable machines, route previews, delivery test, and saves |
 | [Crop care](docs/CROP_CARE.md) | Configurable systems, supplies, equipment, and automation API |
 | [Architecture](docs/ARCHITECTURE.md) | Modules, state, execution, storage, and limits |
 | [Roadmap](docs/ROADMAP.md) | Suggested improvements and programmable factory concept |

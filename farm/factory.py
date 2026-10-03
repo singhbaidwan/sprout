@@ -2,7 +2,7 @@
 
 from collections import deque
 
-from . import cultivation, efficiency, challenges, recycling
+from . import cultivation, efficiency, challenges, recycling, layout
 from .engine import Farm, GameError, STAT_NAMES, empty_tile, integer, validate_state
 
 ITEMS = ("wheat", "flour", "bread")
@@ -29,7 +29,7 @@ MISSIONS = [
 FACTORY_STATS = STAT_NAMES + ("flour_milled", "bread_baked", "bread_delivered")
 ORDER = {"target": 12, "deadline": 180, "reward": 40, "unlock": 4}
 CATALOG = {"entities": ENTITIES, "obstacles": OBSTACLES, "upgrades": UPGRADES,
-           "field": {"width": 6, "height": 4}, "cargo_capacity": 8, "harvest_yield": 3, "order": ORDER, "recycling": recycling.RULES}
+           "field": {"width": 6, "height": 4}, "cargo_capacity": 8, "harvest_yield": 3, "order": ORDER, "recycling": recycling.RULES, "layout": layout.RULES}
 DIRECTIONS = {"east": (1, 0), "south": (0, 1), "west": (-1, 0), "north": (0, -1)}
 
 
@@ -127,6 +127,8 @@ def validate_factory(raw):
             raise GameError("This active order should already be resolved.")
         if "recycling" in raw:
             state["recycling"] = recycling.validate(raw["recycling"], state)
+        if "layout" in raw:
+            state["layout"] = layout.validate(raw["layout"], state)
         if "efficiency" in raw:
             state["efficiency"] = efficiency.validate(raw["efficiency"], state)
         if "challenge" in raw:
@@ -147,7 +149,8 @@ class Factory(Farm):
         return (16 if "cargo" in self.state["upgrades"] else 8) - sum(self.state["cargo"].values())
 
     def entities(self):
-        return dict(ENTITIES, **recycling.ENTITIES) if "recycling" in self.state else ENTITIES
+        definitions = dict(ENTITIES, **recycling.ENTITIES) if "recycling" in self.state else ENTITIES
+        return layout.entities(self.state, definitions)
 
     def machines(self):
         return dict(self.state["machines"], **self.state['recycling']['machines']) if 'recycling' in self.state else self.state['machines']

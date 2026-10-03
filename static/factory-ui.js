@@ -1,10 +1,11 @@
 // Breadworks presentation reads its rules and recipes from the Python catalog.
+import {withPositions} from './layout-rules.js';
 const $ = id => document.getElementById(id);
 const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 export function describeFactoryTile(state, catalog, x, y) {
   if (catalog.obstacles.some(([ox, oy]) => ox === x && oy === y)) return 'Rock · blocks movement';
-  const entity = Object.entries(catalog.entities).find(([, entity]) => entity.x === x && entity.y === y);
+  const entity = Object.entries(withPositions(catalog.entities,state.layout?.positions)).find(([, entity]) => entity.x === x && entity.y === y);
   if (entity) {
     const [name, def] = entity;
     return `${def.title} · ${name === 'depot' ? `${def.price} coins per bread` : name === 'chest' ? `${Object.values(state.chest).reduce((a,b) => a+b,0)} / ${def.capacity} items` : machineLabel(state, catalog, name)}`;
@@ -20,10 +21,11 @@ function machineLabel(state, catalog, name) {
 }
 
 export function setupFactory(catalog) {
-  $('production-cards').innerHTML = Object.entries(catalog.entities).map(([name, def]) => `<article class="production-card ${name}"><div class="production-title"><strong>${escape(def.title)}</strong><span>(${def.x}, ${def.y})</span></div><p>${name === 'chest' ? `Shared storage · ${def.capacity} items` : name === 'depot' ? `Bread → ${def.price} coins each` : `${def.amount} ${def.ingredient} → 1 ${def.product}`}</p><strong id="stock-${name}" class="production-stock"></strong>${name === 'mill' || name === 'oven' ? `<progress id="process-${name}" max="${def.ticks}" value="0" aria-label="${def.title} batch progress"></progress>` : ''}<span id="status-${name}" class="production-status"></span></article>`).join('');
+  $('production-cards').innerHTML = Object.entries(catalog.entities).map(([name, def]) => `<article class="production-card ${name}"><div class="production-title"><strong>${escape(def.title)}</strong><span id="position-${name}">(${def.x}, ${def.y})</span></div><p>${name === 'chest' ? `Shared storage · ${def.capacity} items` : name === 'depot' ? `Bread → ${def.price} coins each` : `${def.amount} ${def.ingredient} → 1 ${def.product}`}</p><strong id="stock-${name}" class="production-stock"></strong>${name === 'mill' || name === 'oven' ? `<progress id="process-${name}" max="${def.ticks}" value="0" aria-label="${def.title} batch progress"></progress>` : ''}<span id="status-${name}" class="production-status"></span></article>`).join('');
 }
 
 export function updateFactory(state, catalog, busy) {
+  for (const [name,d] of Object.entries(withPositions(catalog.entities,state.layout?.positions))) $('position-'+name).textContent = `(${d.x}, ${d.y})`;
   const capacity = catalog.cargo_capacity * (state.upgrades.includes('cargo') ? 2 : 1);
   $('cargo-count').textContent = `${Object.values(state.cargo).reduce((a,b) => a+b,0)} / ${capacity}`;
   $('cargo-items').textContent = Object.entries(state.cargo).map(([item, n]) => `${n} ${item}`).join(' · ');

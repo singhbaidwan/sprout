@@ -80,7 +80,7 @@ def validate(raw, state):
         if raw['status'] not in ('active', 'complete', 'failed') or ('team' in state) != (drones == 2):
             raise GameError('Invalid challenge team or status.')
         settings = {'fertilizer': False, 'irrigation': rule['irrigation'], 'soil': False}
-        if 'recycling' in state or state['care']['settings'] != settings or state['upgrades'] or state['order']['status'] != 'idle':
+        if 'layout' in state or 'recycling' in state or state['care']['settings'] != settings or state['upgrades'] or state['order']['status'] != 'idle':
             raise GameError('Challenge rules and upgrades are fixed for comparable scores.')
         if 'efficiency' not in state or state['efficiency']['start_tick'] != 0 or state['efficiency']['start_delivered'] != 0 or state['tick'] > rule['deadline']:
             raise GameError('Invalid challenge measurement baseline.')

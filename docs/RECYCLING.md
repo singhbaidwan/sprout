@@ -22,7 +22,7 @@ Each successful wheat harvest puts **one residue** into the shared hopper at the
 | Composter | `(1, 5)` | 2 residue → 2 compost | 12 input / 8 output | 6 world ticks |
 | Fertilizer mixer | `(5, 5)` | 1 compost → 2 fertilizer | 12 input / 8 output | 4 world ticks |
 
-The well shares a growing plot and the existing irrigation refill location. Crops and farming there still work. The two machines occupy existing travel lanes. Their pads and recipes are fixed; construction, recycling-machine upgrades and conveyors are not included.
+The well shares a growing plot and the existing irrigation refill location. Crops and farming there still work. The two machines start on the lane pads above. Installed composter/mixer pads can move through [Workshop layouts](LAYOUTS.md), even while paused. The well and recipes stay fixed; construction, recycling-machine upgrades and conveyors are not included.
 
 With recycling enabled, Soil health still depletes nutrients but **no longer gives instant compost** when harvesting. Byproducts instead travel through the composter. This avoids collecting both instant compost and industrial compost from the same harvest. Recycling disabled keeps the original instant-compost rule. Home farm always keeps that rule.
 
@@ -85,4 +85,4 @@ Portable solo/team continuations preserve new materials and active batches and r
 
 Regression coverage includes all eight care combinations, per-step conservation, atomic capacity failures, output reservations, pause/resume, old and new checkpoints, team contention, usable returned supplies and HTTP configuration. In an additional 1,800-tick playtest, all eight autopilot variants delivered 54–61 bread; fertilizer-enabled variants returned 40–48 manufactured doses. These are example results, not fixed challenge scores or an optimal strategy.
 
-Placeable buildings, shorter conveyors/routes, new recycling challenges, power and additional recipes remain separate proposals in [ROADMAP.md](ROADMAP.md).
+Existing machines can now move through [Workshop layouts](LAYOUTS.md). Extra buildings, conveyors, new recycling challenges, power and recipes remain separate proposals in [ROADMAP.md](ROADMAP.md).

@@ -25,3 +25,5 @@ jobs:
           done
       - name: Challenge record persistence
         run: node tests/challenge_records.mjs
+      - name: Layout preview rules
+        run: node tests/layout_rules.mjs

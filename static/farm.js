@@ -240,13 +240,27 @@ export class FarmRenderer {
       if(s.care.plots[i].fertilized) {const p=this.point(i%n+.5,Math.floor(i/n)+.5);this.ellipse(p.x+u*.42,p.y-8,2.5,2.5,'#f2de95');}
     }
     // Labels sit above the finished ground layer so foreground tiles cannot erase them.
+    const labels = [];
     if(s.scenario==='factory') for(const [name,entity] of Object.entries(entities)) {
       const p=this.point(entity.x+.5,entity.y+.5);
       c.font='600 '+Math.max(9,Math.min(11,u*.48))+'px ui-monospace, monospace';c.textAlign='center';
       const width=c.measureText(name).width+12;
-      const labelY = p.y + v*.7 + (name === 'composter' ? 18 : 0);
-      c.fillStyle='#f9f9ecee';c.fillRect(p.x-width/2,labelY,width,16);
-      c.fillStyle='#4d6249';c.fillText(name,p.x,labelY+11);
+      const left = Math.max(2, Math.min(this.width-width-2, p.x-width/2));
+      let labelY = p.y + v*.7;
+      for (const offset of [0,18,-18,36,-36,54,-54,72,-72]) {
+        const candidate = Math.max(2, Math.min(this.height-18, p.y+v*.7+offset));
+        if (!labels.some(box => left < box.right+3 && left+width > box.left-3 && candidate < box.bottom+2 && candidate+16 > box.top-2)) {
+          labelY = candidate; break;
+        }
+      }
+      labels.push({left, right:left+width, top:labelY, bottom:labelY+16});
+      if (Math.abs(labelY-(p.y+v*.7)) > 3) this.line(p.x,p.y+v*.5,left+width/2,labelY,'#7e9470',1);
+      c.fillStyle='#f9f9ecee';c.fillRect(left,labelY,width,16);
+      c.fillStyle='#4d6249';c.fillText(name,left+width/2,labelY+11);
+    }
+    if (s.scenario === 'factory' && this.placement) {
+      const p = this.point(this.placement.x+.5,this.placement.y+.5);
+      this.polygon([[p.x,p.y-v+1],[p.x+u-1,p.y],[p.x,p.y+v-1],[p.x-u+1,p.y]], '#6b9fca35', this.placement.valid ? '#326e9b' : '#ad5946', 3);
     }
     // Coordinate markers along the two near field edges.
     c.font = `${Math.max(9, Math.min(11, u*.35))}px ui-monospace, monospace`; c.fillStyle = '#92a177'; c.textAlign = 'center';

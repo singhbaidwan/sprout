@@ -79,3 +79,7 @@ Breadworks also offers **Drone team (2)**. It reuses these bounded VM continuati
 ## Optional recycling controller
 
 Breadworks offers **Recycling autopilot**, which automatically selects Continuous mode. Enable Crop recycling before running it; enable Soil health/Fertilizer to consume the produced supplies. It handles the bakery and the composter/mixer chain in one solo program. The original Continuous autopilot does not transport byproducts. Both use the same bounded VM, portable checkpoints and paused recovery; new material inventories are preserved. [Recipes and controller limits](RECYCLING.md).
+
+## Moving workshop machines
+
+Breadworks supports [Workshop layouts](LAYOUTS.md). Stop first to discard any saved route; a paused checkpoint also disables placement until stopped. Apply costs no ticks and keeps stock/batches. Named `navigate_to()` calls follow the next program's new pads. Saved custom-layout controllers resume their exact routes after reload/import, paused as usual. Moving outside the UI invalidates an older world's checkpoint digest.

@@ -137,6 +137,8 @@ Examples run from current state. First bread is an opening tutorial; later scrip
 
 ### Map and transport
 
+The table shows default positions. Stop and open **Workshop layout** to move mill/oven and installed recycling machines onto valid lane pads. Preview shortest routes, try Compact workshop, and Apply. Moves keep stock/batches and take no ticks or coins. Finish active orders first; challenges stay fixed. Named routes follow moved machines. **Layout delivery test** compares four-loaf jobs from identical starting stock. [Full rules and saves](LAYOUTS.md).
+
 | Location | Coordinates | Purpose |
 | --- | --- | --- |
 | Growing field | x 0–5, y 0–3 | 24 plots for wheat. |

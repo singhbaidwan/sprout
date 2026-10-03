@@ -24,13 +24,14 @@ The proposed differentiator is the interaction between ecology and factory sched
 | Implemented now | Optional two-drone team | Assign farming and courier roles, observe cargo congestion, keep the bakery supplied. | Independent programs and cargo, one world clock, conflict handling, paused saves, all growing-option combinations tested. |
 | Implemented now | Efficiency dashboard and three reproducible contract scenarios | Deliver 24 loaves in a fixed tick budget; then improve water per loaf, machine idle time, and empty travel. | Fixed starting snapshot, visible before/after score, personal records separated by rule preset and drone count. |
 | Delivered: production choices | Optional residue → compost → fertilizer | Split compost between soil restoration and manufactured fertilizer for growing crops. | Conserved items, bounded buffers, pause/resume and a working bakery/recycler controller. [Rules](RECYCLING.md). Biomass/fuel remains proposed. |
-| Next: buildable logistics | Place machines, short conveyors, storage targets, reusable routes | Reduce delivery distance; reserve enough grain for seeds or processing. | Validated layouts and blueprints, visible buffer/throughput limits, old fixed-map saves preserved. |
+| Delivered: workshop planning | Relocate existing machines, route previews, compact/default layouts, delivery comparison | Trade chest/mill distance against the depot trip; improve code and layout together. | Atomic validated positions, stock/batch preservation, named routes, old/custom saves tested. [Rules](LAYOUTS.md). |
+| Next: deeper logistics | Short conveyors, additional machines, storage targets, reusable routes | Divert products between destinations and reduce repeated transfer trips. | Conserved transport buffers with one shared clock; construction and blueprint rules designed separately. |
 | Later: living fields | Crop rotation, adjacency effects, and crop-specific harvest rules | Alternate soil-restoring crops with hungry crops; reserve irrigation for the right field zone. | Each crop changes code structure or planning, not just its price; inspectors explain effects. |
 | Later: predictable variation | Optional weather forecasts and seasonal contract demand | Store water ahead of a dry period or change production before market demand shifts. | Seeded, replayable scenarios; visible forecast; no unexplained crop loss; toggles retain progress. |
 | Later: specialization | Scout/sensor, irrigator, hauler attachments and research branches | Trade cargo capacity for watering reach or sensing coverage. | Sidegrades create distinct strategies; ordinary Python control flow stays available from the start. |
 | Later: sharing | Local challenge seeds and code/blueprint export | Compare two programs against the exact same starting farm and rule set. | Portable validated artifacts, deterministic results, no hosted account system required. |
 
-**Efficiency feedback plus three contract scenarios** is delivered: Bakery Rush, Waterwise Harvest and Full Buffers, each with separate solo/team records. All six starter variants complete within their tested budgets. [Exact shipped rules and results](CHALLENGES.md). The optional conserved byproduct chain is also delivered: crop care and factory transport now share useful outputs. Buildable logistics is the next proposal; placement, costs and transport rules still need design.
+**Efficiency feedback plus three contract scenarios** is delivered: Bakery Rush, Waterwise Harvest and Full Buffers, each with separate solo/team records. All six starter variants complete within their tested budgets. [Exact shipped rules and results](CHALLENGES.md). The optional conserved byproduct chain is also delivered: crop care and factory transport now share useful outputs. Workshop planning is delivered as free relocation of existing machines. Limited conveyors, extra machine costs and blueprint sharing still need design.
 
 ## Configurable complexity
 
@@ -43,7 +44,7 @@ Introduce systems when they create a new decision. Avoid adding several routine 
 1. Build on the implemented shared-clock scheduler and versioned saves; do not tick the world once per drone or conveyor.
 2. Bounded measurement counters, a snapshot-based scenario runner and local personal records are implemented. Online leaderboards remain a separate proposal.
 3. One conserved byproduct chain and live buffer/status inspection are implemented. Gather balancing feedback before adding more recipes.
-4. Design schema migration and construction validation before movable buildings or blueprints.
+4. Sparse layout migration and relocation validation are implemented. Design construction costs and conveyor timing before extra buildings or blueprints.
 5. Keep complete original artwork/code; study design principles rather than copying assets, maps, progression names, or exact puzzles.
 
 Requirements and implementation details for the delivered drone milestone are in [DRONE_TEAMS.md](DRONE_TEAMS.md). Broader proposals remain scoped separately in [ROADMAP.md](ROADMAP.md).

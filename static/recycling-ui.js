@@ -1,7 +1,8 @@
+import {withPositions, layoutEntities} from './layout-rules.js';
 const $ = id => document.getElementById(id);
 
 export function factoryEntities(state, catalog) {
-  return state.recycling ? {...catalog.entities, ...catalog.recycling.entities} : catalog.entities;
+  return layoutEntities(state,catalog);
 }
 
 function label(state, rules, name) {
@@ -14,7 +15,7 @@ function label(state, rules, name) {
 
 export function describeRecyclingTile(state, rules, x, y) {
   if (!state.recycling) return null;
-  const match = Object.entries(rules.entities).find(([, d]) => d.x === x && d.y === y);
+  const match = Object.entries(withPositions(rules.entities,state.layout?.positions)).find(([, d]) => d.x === x && d.y === y);
   if (!match) return null;
   const [name, rule] = match;
   return name === 'well' ? `${rule.title} · ${state.recycling.residue}/${rules.hopper_capacity} residue` : `${rule.title} · ${label(state, rules, name)}`;
@@ -22,7 +23,7 @@ export function describeRecyclingTile(state, rules, x, y) {
 
 export function setupRecycling(rules, onChange) {
   $('recycling-toggle').addEventListener('change', event => onChange(event.target.checked));
-  $('recycling-cards').innerHTML = Object.entries(rules.entities).map(([name, d]) => `<article class="production-card ${name}"><div class="production-title"><strong>${d.title}</strong><span>(${d.x}, ${d.y})</span></div><p>${name === 'well' ? 'Harvest residue → drone transport' : `${d.amount} ${d.ingredient} → ${d.output_amount} ${d.product} · ${d.ticks} ticks`}</p><strong id="recycling-stock-${name}" class="production-stock"></strong>${name !== 'well' ? `<progress id="recycling-process-${name}" max="${d.ticks}" value="0" aria-label="${d.title} batch progress"></progress>` : ''}<span id="recycling-status-${name}" class="production-status"></span></article>`).join('');
+  $('recycling-cards').innerHTML = Object.entries(rules.entities).map(([name, d]) => `<article class="production-card ${name}"><div class="production-title"><strong>${d.title}</strong><span id="recycling-position-${name}">(${d.x}, ${d.y})</span></div><p>${name === 'well' ? 'Harvest residue → drone transport' : `${d.amount} ${d.ingredient} → ${d.output_amount} ${d.product} · ${d.ticks} ticks`}</p><strong id="recycling-stock-${name}" class="production-stock"></strong>${name !== 'well' ? `<progress id="recycling-process-${name}" max="${d.ticks}" value="0" aria-label="${d.title} batch progress"></progress>` : ''}<span id="recycling-status-${name}" class="production-status"></span></article>`).join('');
 }
 
 export function updateRecycling(state, rules, busy) {
@@ -35,6 +36,7 @@ export function updateRecycling(state, rules, busy) {
   $('recycling-mode').textContent = line?.enabled ? 'Production on' : line ? 'Paused · stock kept' : 'Optional';
   $('recycling-dashboard').hidden = !line;
   if (!line) return;
+  for (const [name,d] of Object.entries(withPositions(rules.entities,state.layout?.positions))) $('recycling-position-'+name).textContent = `(${d.x}, ${d.y})`;
   $('recycling-stock-well').textContent = `${line.residue}/${rules.hopper_capacity} residue · ${state.care.compost} compost · ${state.care.fertilizer} fertilizer`;
   $('recycling-status-well').textContent = line.enabled && line.residue === rules.hopper_capacity ? 'Hopper full · transport residue before harvesting' : 'Return finished supplies here to use them on crops';
   for (const name of ['composter', 'mixer']) {

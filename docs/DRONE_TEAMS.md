@@ -54,3 +54,7 @@ The factory's optional `team.version = 1` extension stores the second drone's po
 ## Recycling materials
 
 Installed recycling adds residue, compost and fertilizer to both drones' cargo maps. Stock, outputs and growing supplies are shared; alternating pad priority and atomic transfers apply unchanged. The new machines advance once per combined tick. Returned products at the well enter shared care supplies; carried products stay with their drone, including when parked. The new Recycling autopilot example is solo; customize both controllers to divide bakery and recycling work. Original team starters do not clear the optional residue hopper. [Full recycling rules](RECYCLING.md).
+
+## Custom workshop layouts
+
+Stop both controllers before [moving existing machines](LAYOUTS.md). All positions, cargo and machine stock/batches survive placement. Both programs' named routes use the new pads, and shared work-slot contention follows those pads. Moving does not advance either drone or the shared world. Portable team checkpoints retain layouts and restore paused.

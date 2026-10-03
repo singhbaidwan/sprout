@@ -74,7 +74,7 @@ The approved next milestone adds a separate factory chapter to give players dist
 | B10 | Recoverable saves | Save validation preserves inventories, upgrades, in-flight batches, and active orders. Export/import includes both chapters. |
 | B11 | Playable examples | Starter, whole-field tending, repeatable farm-to-bakery, and stock-processing order scripts work within action limits. |
 
-Factory starts with 30 coins, four ripe wheat plots, and 12 wheat in the chest. Growing area is x 0–5, y 0–3. Building pads are chest (0,6), mill (3,6), oven (6,6), depot (7,3). Rocks are (6,2), (6,3), (3,4). The depot buys bread for 8 coins each.
+Factory starts with 30 coins, four ripe wheat plots, and 12 wheat in the chest. Growing area is x 0–5, y 0–3. Default building pads are chest (0,6), mill (3,6), oven (6,6), depot (7,3). Rocks are (6,2), (6,3), (3,4). The depot buys bread for 8 coins each.
 
 Upgrades: cargo 8→16 for 50 coins, mill 4→2 ticks for 75, oven 6→3 ticks for 90. They do not consume a simulation tick. Existing batches keep their remaining duration. Mission goals are 4 flour, 4 baked bread, 4 delivered bread, 12 harvested plots, 20 delivered bread, and 50 delivered bread; rewards are 15, 20, 30, 40, 80, 150 coins respectively.
 
@@ -163,4 +163,18 @@ Exact rules, definitions, score bounds and schema are in [CHALLENGES.md](CHALLEN
 | R09 | Compatible conserved saves | Optional versioned extension; old item maps and checkpoint digests remain unchanged until enablement. Ledger includes stock, active ingredients and cumulative exports; malformed/lost/duplicated material fails validation. |
 | R10 | Playable examples | Finite first-fertilizer demo and Continuous bakery/recycler controller; all eight growing-option combinations pass. Existing bakery and six challenge starters remain playable. |
 
-Exact operational limits and schema are in [RECYCLING.md](RECYCLING.md). Original crop-care requirement C05 retains instant compost except when this independent module is on. Placeable buildings, conveyors, fuel/power and extra recipes remain proposals rather than implemented APIs.
+Exact operational limits and schema are in [RECYCLING.md](RECYCLING.md). Original crop-care requirement C05 retains instant compost except when this independent module is on. Existing machines now support relocation as specified below. Extra buildings, conveyors, fuel/power and recipes remain proposals.
+
+## Workshop layout planning — implemented 2026-10-03
+
+| ID | Requirement | Acceptance criterion |
+| --- | --- | --- |
+| L01 | Movable machines | Mill/oven and installed composter/mixer move to valid lane pads; chest/depot/well remain fixed. |
+| L02 | Atomic layout changes | Reject crops, rocks, edges and overlaps before mutation. Whole-layout swaps work; uninstalled recycling pads remain reserved. |
+| L03 | Preserved progress | Moving takes no ticks/coins and retains stock, batches, both drones, care and measurements. |
+| L04 | Route-aware UI | Keyboard pad buttons, map preview, current/proposed shortest distances, compact/default previews, discard/apply, stock coordinates and inspection agree. |
+| L05 | Compatible saves | Optional sparse version 1 layout; absent old worlds stay absent. Portable solo/team checkpoints retain layouts and restore paused. |
+| L06 | Fair scenarios | Stop before editing; active orders block apply; fixed trials reject configuration and even empty layout extensions. |
+| L07 | Playable comparison | Four-loaf delivery test works on defaults/custom pads; named-route solo/team/recycling examples sustain custom layouts. |
+
+See [LAYOUTS.md](LAYOUTS.md) for exact pads, schemas and benchmark assumptions. Extra machine construction, construction costs, conveyors and standalone blueprint sharing remain separate proposals.

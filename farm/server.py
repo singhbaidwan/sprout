@@ -10,7 +10,7 @@ from .interpreter import run_script
 from .continuous import step_script
 from .team import step_team
 from .saves import validate_save
-from . import cultivation, challenges, efficiency, recycling
+from . import cultivation, challenges, efficiency, recycling, layout
 from .world import create_game, validate_game
 from .factory import CATALOG, MISSIONS as FACTORY_MISSIONS, new_factory, Factory
 
@@ -19,6 +19,7 @@ EXAMPLES = STATIC.parent / "examples"
 ASSETS = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
           "/farm.js": ("farm.js", "text/javascript"), "/factory-ui.js": ("factory-ui.js", "text/javascript"), "/style.css": ("style.css", "text/css"),
           "/cultivation-ui.js": ("cultivation-ui.js", "text/javascript"), "/challenges-ui.js": ("challenges-ui.js", "text/javascript"), "/recycling-ui.js": ("recycling-ui.js", "text/javascript"), "/favicon.svg": ("favicon.svg", "image/svg+xml")}
+ASSETS.update({f'/{name}.js': (f'{name}.js', 'text/javascript') for name in ('layout-rules', 'layout-ui')})
 MAX_BODY = 100000
 MAX_SAVE_BODY = 1000000
 MAX_CONTROLLER_BODY = 600000
@@ -60,7 +61,7 @@ class GameHandler(BaseHTTPRequestHandler):
             examples = {name: (EXAMPLES / (filename + ".py")).read_text() for name, filename in {
                 "starter": "starter", "full_field": "full_field", "smart_farmer": "smart_farmer", "carrots": "carrots", "continuous": "continuous"
             }.items()}
-            factory_examples = {name: (EXAMPLES / f"factory_{name}.py").read_text() for name in ("starter", "harvest", "bakery", "orders", "continuous", "team_farmer", "team_courier", "recycling", "recycling_loop")}
+            factory_examples = {name: (EXAMPLES / f"factory_{name}.py").read_text() for name in ("starter", "harvest", "bakery", "orders", "continuous", "team_farmer", "team_courier", "recycling", "recycling_loop", "layout_lab")}
             care_examples = {name: (EXAMPLES / f"{name}.py").read_text() for name in ("crop_care", "irrigation")}
             examples.update(care_examples); factory_examples.update(care_examples)
             return self.respond(200, {"state": new_state(), "crops": CROPS, "missions": MISSIONS, "examples": examples,
@@ -115,6 +116,10 @@ class GameHandler(BaseHTTPRequestHandler):
             if path == '/api/recycling':
                 state = validate_game(payload.get('state'))
                 message = recycling.configure(state, payload.get('enabled'))
+                return self.respond(200, {'state': state, 'message': message})
+            if path == '/api/layout':
+                state = validate_game(payload.get('state'))
+                message = layout.configure(state, payload.get('positions'))
                 return self.respond(200, {'state': state, 'message': message})
             if path == "/api/settings":
                 state = validate_game(payload.get("state"))

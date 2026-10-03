@@ -46,7 +46,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(data['chapters']['factory']['state'], new_factory())
         self.assertEqual(data['chapters']['factory']['catalog']['recycling']['entities']['mixer']['output_amount'], 2)
         self.assertIn('recycling_loop', data['chapters']['factory']['examples'])
-        for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/cultivation-ui.js', '/challenges-ui.js', '/recycling-ui.js', '/style.css', '/favicon.svg']:
+        self.assertIn('layout_lab', data['chapters']['factory']['examples'])
+        self.assertEqual(data['chapters']['factory']['catalog']['layout']['version'], 1)
+        for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/cultivation-ui.js', '/challenges-ui.js', '/recycling-ui.js', '/layout-ui.js', '/layout-rules.js', '/style.css', '/favicon.svg']:
             status, headers, body = self.request('GET', asset)
             self.assertEqual(status, 200)
             self.assertGreater(len(body), 100)
@@ -197,7 +199,7 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertIsNone(json.loads(body)['error'])
             for endpoint, values in [('/api/settings', {'settings': {'fertilizer': False, 'irrigation': False, 'soil': False}}),
-                                     ('/api/unlock', {'item': 'cargo'}), ('/api/order', {}), ('/api/efficiency/reset', {}), ('/api/recycling', {'enabled': True})]:
+                                     ('/api/unlock', {'item': 'cargo'}), ('/api/order', {}), ('/api/efficiency/reset', {}), ('/api/recycling', {'enabled': True}), ('/api/layout', {'positions': {}})]:
                 status, _, _ = self.request('POST', endpoint, dict(state=state, **values))
                 self.assertEqual(status, 400)
             wrong = {'state': state, 'codes': ['wait()', 'wait()']} if drones == 1 else {'state': state, 'code': 'wait()'}
@@ -205,6 +207,23 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(status, 400)
         status, _, _ = self.request('POST', '/api/challenge/start', {'id': 'unknown', 'drones': 1})
         self.assertEqual(status, 400)
+
+    def test_layout_endpoint_preserves_world_and_rejects_invalid_positions(self):
+        state = new_factory()
+        positions = {'mill': {'x':1,'y':6}, 'oven': {'x':2,'y':6}}
+        status, _, body = self.request('POST', '/api/layout', {'state':state,'positions':positions})
+        self.assertEqual(status,200)
+        moved = json.loads(body)['state']
+        self.assertEqual(moved['layout']['positions'],positions)
+        self.assertEqual({k:v for k,v in moved.items() if k != 'layout'},state)
+        status, _, body = self.request('POST','/api/validate',{'state':moved})
+        self.assertEqual(status,200); self.assertEqual(json.loads(body)['state'],moved)
+        status, _, body = self.request('POST','/api/layout',{'state':moved,'positions':{}})
+        self.assertEqual(status,200); self.assertEqual(json.loads(body)['state'],state)
+        for payload in ({'state':new_state(),'positions':positions}, {'state':state},
+                        {'state':state,'positions':{'mill':{'x':0,'y':6}}}):
+            status, _, _ = self.request('POST','/api/layout',payload)
+            self.assertEqual(status,400)
 
     def test_efficiency_reset_keeps_world_and_restarts_measurement(self):
         status, _, body = self.request('POST', '/api/run', {'state': new_factory(), 'code': 'wait()'})

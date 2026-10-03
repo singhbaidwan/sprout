@@ -25,6 +25,8 @@ farm.js: responsive canvas world        POST /api/run → interpreter → Farm /
 | `static/cultivation-ui.js` | Options, supply/goal dashboard, inspection text, and crop-care guide. |
 | `farm/factory.py` | Breadworks catalog, inventories, recipes, routes, upgrades, missions, orders, and strict world validation. |
 | `farm/recycling.py` | Optional residue, composter/mixer production, pause/resume and conserved-material validation. |
+| `farm/layout.py` | Atomic movable-pad validation and sparse optional layout extension. |
+| `static/layout-rules.js`, `static/layout-ui.js` | Preview validation, shortest movement distances, keyboard placement and layout guide. |
 | `static/recycling-ui.js` | Configuration, new stock/status/goals, dynamic building catalog and recycling guide. |
 | `farm/efficiency.py` | Optional bounded counters, pre-action baselines and strict measurement validation. |
 | `farm/challenges.py` | Versioned snapshots, fixed budgets, outcome resolution and personal-score validation. |
@@ -95,6 +97,8 @@ This is a small game language, not a complete implementation of Python. In parti
 ## HTTP API
 
 All POST requests require `Content-Type: application/json`. Run/upgrade/order requests have the original 100,000-byte limit. Portable save validation permits 1,000,000 bytes for campaign chapters, the isolated challenge trial and records; controller stepping retains 600,000 bytes for programs/checkpoints, including JSON escaping overhead. HTTP errors have `{ "error": "message" }`. Script errors are part of a successful `/api/run` response so earlier frames can still play.
+
+`POST /api/layout` takes `{state, positions}` and returns `{state, message}`. It replaces the complete sparse machine-position map after validating every destination together. `{}` restores defaults. See [LAYOUTS.md](LAYOUTS.md) for placement constraints, order/trial restrictions and save compatibility.
 
 | Endpoint | Input | Output |
 | --- | --- | --- |
@@ -175,8 +179,14 @@ Metrics attach lazily: validation preserves old worlds without the extension, av
 
 ## Optional recycling extension
 
-`farm/recycling.py` adds fixed well/composter/mixer catalog entries only to installed campaign worlds. `recycling.version = 1` and three new inventory keys are absent from untouched worlds; validation keeps them absent, preserving old world/controller bindings. First enablement adds zero-valued keys to both cargo bags and the chest, without altering time or care settings. Disabling retains the extension and pauses machine progress; dynamic entities and transfers remain available. Challenges reject the extension even when disabled.
+`farm/recycling.py` adds default well/composter/mixer catalog entries only to installed campaign worlds. `recycling.version = 1` and three new inventory keys are absent from untouched worlds; validation keeps them absent, preserving old world/controller bindings. First enablement adds zero-valued keys to both cargo bags and the chest, without altering time or care settings. Disabling retains the extension and pauses machine progress; dynamic entities and transfers remain available. Challenges reject the extension even when disabled.
 
 Each enabled successful harvest places one residue in a 48-item hopper, with a capacity check before any harvest mutation. Soil depletion is unchanged, but the care hook suppresses its instant compost when recycling is enabled. The composter converts 2 residue to 2 compost in 6 ticks; the mixer converts 1 compost to 2 fertilizer in 4. Both reserve two output slots and have 12-item input / 8-item output buffers. Processing is in `Factory.advance_systems()`, never the team planning or per-drone commit phase. New output cannot move until the following action; inputs delivered this tick can start a batch in this phase.
 
 Strict validation reconstructs bounded machine/inventory records and accounts for half-residue units across the hopper, all cargo/chest stock, input/output, ingredients reserved by active batches and cumulative returns to care supplies. Each residue/compost weighs 2, fertilizer 1; the total equals twice the harvested residue count. Export counters retain consumed crop-care material without mixing in starting or purchased supplies. See [RECYCLING.md](RECYCLING.md) for the schema and operational contract. No compiler commands, checkpoint version, public server boundary or transport threading were added.
+
+## Workshop layout extension
+
+`farm/layout.py` validates a complete sparse position map before atomic configuration. `Factory.entities()` resolves overrides against immutable catalog definitions; navigation, docking, stock queries and team planning all use that resolved catalog. Recipe timing still uses the original machine definitions and the single shared phase. Terrain and air-lane rules are unchanged.
+
+The optional extension remains absent in old worlds, and validation retains present empty extensions to preserve checkpoint hashes. Configuration prunes defaults. Layout validates after installed recycling and before fixed challenge rules. The UI discards old continuations through Stop, previews with pure bounded BFS helpers, and applies through the existing request/revision guards. Non-simulation configuration never updates efficiency counters. [Exact schema and endpoint](LAYOUTS.md).

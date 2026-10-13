@@ -1,6 +1,6 @@
 # Making Sprout deeper and distinctive
 
-Research reviewed 2026-09-20; implementation status updated 2026-10-03. These are design recommendations, not a claim to have played the reference games. Only the features explicitly marked implemented below exist in Sprout; the proposals do not add Python APIs yet.
+Research reviewed 2026-09-20; implementation status updated 2026-10-14. These are design recommendations, not a claim to have played the reference games. Only the features explicitly marked implemented below exist in Sprout; the proposals do not add Python APIs yet.
 
 ## Lessons from the references
 
@@ -25,13 +25,14 @@ The proposed differentiator is the interaction between ecology and factory sched
 | Implemented now | Efficiency dashboard and three reproducible contract scenarios | Deliver 24 loaves in a fixed tick budget; then improve water per loaf, machine idle time, and empty travel. | Fixed starting snapshot, visible before/after score, personal records separated by rule preset and drone count. |
 | Delivered: production choices | Optional residue → compost → fertilizer | Split compost between soil restoration and manufactured fertilizer for growing crops. | Conserved items, bounded buffers, pause/resume and a working bakery/recycler controller. [Rules](RECYCLING.md). Biomass/fuel remains proposed. |
 | Delivered: workshop planning | Relocate existing machines, route previews, compact/default layouts, delivery comparison | Trade chest/mill distance against the depot trip; improve code and layout together. | Atomic validated positions, stock/batch preservation, named routes, old/custom saves tested. [Rules](LAYOUTS.md). |
-| Next: deeper logistics | Short conveyors, additional machines, storage targets, reusable routes | Divert products between destinations and reduce repeated transfer trips. | Conserved transport buffers with one shared clock; construction and blueprint rules designed separately. |
+| Delivered: bakery infrastructure | Three custom lane conveyors and Python feed gates | Let a drone farm while bounded transport supplies machines; close feeds to reserve stock or drain lines. | Conserved queues, visible backpressure, shared clock, custom-layout saves. [Rules](CONVEYORS.md). |
+| Next: deeper logistics | Splitters, additional machines, storage targets, reusable routes | Divert products between destinations and balance competing demand. | Explicit routing/arbitration; construction and blueprint rules designed separately. |
 | Later: living fields | Crop rotation, adjacency effects, and crop-specific harvest rules | Alternate soil-restoring crops with hungry crops; reserve irrigation for the right field zone. | Each crop changes code structure or planning, not just its price; inspectors explain effects. |
 | Later: predictable variation | Optional weather forecasts and seasonal contract demand | Store water ahead of a dry period or change production before market demand shifts. | Seeded, replayable scenarios; visible forecast; no unexplained crop loss; toggles retain progress. |
 | Later: specialization | Scout/sensor, irrigator, hauler attachments and research branches | Trade cargo capacity for watering reach or sensing coverage. | Sidegrades create distinct strategies; ordinary Python control flow stays available from the start. |
 | Later: sharing | Local challenge seeds and code/blueprint export | Compare two programs against the exact same starting farm and rule set. | Portable validated artifacts, deterministic results, no hosted account system required. |
 
-**Efficiency feedback plus three contract scenarios** is delivered: Bakery Rush, Waterwise Harvest and Full Buffers, each with separate solo/team records. All six starter variants complete within their tested budgets. [Exact shipped rules and results](CHALLENGES.md). The optional conserved byproduct chain is also delivered: crop care and factory transport now share useful outputs. Workshop planning is delivered as free relocation of existing machines. Limited conveyors, extra machine costs and blueprint sharing still need design.
+**Efficiency feedback plus three contract scenarios** is delivered: Bakery Rush, Waterwise Harvest and Full Buffers, each with separate solo/team records. All six starter variants complete within their tested budgets. [Exact shipped rules and results](CHALLENGES.md). The optional conserved byproduct chain is also delivered: crop care and factory transport now share useful outputs. Workshop planning is delivered as free relocation of existing machines. Limited bakery conveyors are delivered. Splitters, extra machine costs and blueprint sharing still need design.
 
 ## Configurable complexity
 

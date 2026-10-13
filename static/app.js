@@ -4,6 +4,7 @@ import { FarmRenderer } from './farm.js';
 import { describeFactoryTile, setupFactory, updateFactory, factoryGuide } from './factory-ui.js';
 import { setupRecycling, updateRecycling, describeRecyclingTile, recyclingGuide } from './recycling-ui.js';
 import { setupLayout, updateLayout, layoutGuide } from './layout-ui.js';
+import {setupConveyors,updateConveyors,conveyorGuide} from './conveyor-ui.js';
 
 const $ = id => document.getElementById(id);
 const STORAGE_KEY = 'sprout.save.v2';
@@ -169,7 +170,7 @@ function setMode(next, label) {
   $('runtime-status').textContent = label || ({ idle: 'Ready when you are', paused: 'Paused · step or resume', running: 'Program running', loading: 'Preparing your program', error: 'Check your program' }[mode]);
   $('runtime-dot').className = `status-dot ${mode === 'running' ? 'running' : mode === 'error' ? 'error' : ''}`;
   $('field-status').textContent = mode === 'running' ? 'Drone working' : mode === 'paused' ? 'Drone paused' : 'Drone ready';
-  if (state) { updateUpgrades(); updateTeam(); updateOptimization(state, saveData, busy); updateLayout(state,catalog,busy); }
+  if (state) { updateUpgrades(); updateTeam(); updateOptimization(state, saveData, busy); updateLayout(state,catalog,busy); updateConveyors(state,catalog,busy); }
 }
 
 function updateState(next, action = null) {
@@ -187,6 +188,7 @@ function updateState(next, action = null) {
   updateCare(state, careRules, inTrial() || ['running', 'paused', 'loading'].includes(mode));
   updateOptimization(state, saveData, ['running', 'paused', 'loading'].includes(mode));
   updateLayout(state,catalog,['running','paused','loading'].includes(mode));
+  updateConveyors(state,catalog,['running','paused','loading'].includes(mode));
 }
 
 function tileDescription(tile, x, y) {
@@ -402,6 +404,7 @@ function renderGuide(tab) {
   if (tab === 'care') { $('guide-content').innerHTML = cultivationGuide(); return; }
   if (tab === 'recycling' && isFactory()) { $('guide-content').innerHTML = recyclingGuide(catalog.recycling); return; }
   if (tab === 'layout' && isFactory()) { $('guide-content').innerHTML = layoutGuide(); return; }
+  if (tab === 'conveyors' && isFactory()) { $('guide-content').innerHTML = conveyorGuide(); return; }
   if (isFactory()) { $('guide-content').innerHTML = (tab === 'learn' ? '<h3>Automation challenges</h3><p>Choose a scenario and one or two drones in the challenge panel. Each attempt starts on a separate farm with fixed rules and a starter program. Run it, inspect machine waiting time, water use and empty travel, then Stop to edit and Retry with your code. Your personal records compare the same scenario and team size. Use Continuous for Waterwise Harvest: its budget is longer than the 400-action bounded run.</p><p>Success or an exceeded budget stops the attempt. Return to farm restores your campaign. View saved attempt reopens a parked challenge; reload restores its controller paused. Restart measurement in your campaign to compare experiments over a new window.</p>' : '') + factoryGuide(tab, catalog, missions); return; }
   const content = {
     learn: `<p>You have a small patch of land, a solar-powered drone, and a Python editor. A good routine is all your farm needs.</p><ol><li><strong>Make your first harvest.</strong> The first three plots have ripe wheat. Run the starter program to harvest them, replant the row, and earn your first mission reward.</li><li><strong>Grow a crop.</strong> Use <code>till()</code>, <code>plant("wheat")</code>, then <code>water()</code>. Crops grow when the drone takes actions. Use <code>wait()</code> if you have nothing else to do.</li><li><strong>Think in loops.</strong> Load “The whole field” to plant every plot. Load “Harvest & replant” to maintain it. Each run continues from your current farm state.</li><li><strong>Make room to grow.</strong> Spend coins on carrots, sunflowers, and more land. Complete all four missions, then experiment freely.</li></ol><h3>You're in control</h3><p><strong>Run code</strong> starts or resumes a program. <strong>Pause</strong> freezes it. <strong>Step</strong> performs one drone action. <strong>Stop</strong> discards the remaining actions and keeps the changes you have already seen. Speed changes the animation, not crop growth rules.</p><h3>A few helpful details</h3><p>The field wraps at its edges. North decreases y; east increases x. Time only passes during actions. There is no battery to manage. Water refills are needed only with Irrigation enabled, and wheat has a free emergency seed if you run out of coins. Your farm and editor save on this device.</p><p>Use <strong>Ctrl/Cmd + Enter</strong> to run or pause, <strong>Tab</strong> for four spaces, and <strong>Shift + Tab</strong> to unindent. Select a tile or use Inspect plots to learn what it needs.</p>`,
@@ -447,7 +450,7 @@ $('latest-log').addEventListener('click', () => { $('console').scrollTop = $('co
 $('clear-log').addEventListener('click', () => { $('console').replaceChildren(); logs = 0; $('log-count').textContent = '0'; });
 $('example-select').addEventListener('change', event => {
   const value = event.target.value;
-  if (examples?.[value]) { if (value === 'continuous' || value === 'recycling_loop') { showDrone(0); $('execution-select').value = 'continuous'; } if (value.startsWith('team_')) { $('execution-select').value = 'team'; showDrone(value === 'team_farmer' ? 0 : 1); } setCode(examples[value]); setMode('idle'); save(); log('Example loaded. It will run from your current farm state.'); toast('Example loaded. Make it your own.'); }
+  if (examples?.[value]) { if (value === 'continuous' || value === 'recycling_loop' || value === 'conveyor_loop') { showDrone(0); $('execution-select').value = 'continuous'; } if (value.startsWith('team_')) { $('execution-select').value = 'team'; showDrone(value === 'team_farmer' ? 0 : 1); } setCode(examples[value]); setMode('idle'); save(); log('Example loaded. It will run from your current farm state.'); toast('Example loaded. Make it your own.'); }
   event.target.value = '';
 });
 
@@ -566,9 +569,10 @@ function activateChapter(name, game) {
   $('guide-title').textContent = factory ? 'The path from grain to bread.' : 'A small guide to big harvests.';
   document.querySelector('[data-guide="crops"]').textContent = factory ? 'Recipes & missions' : 'Crops & missions';
   const labels = factory ? {starter: 'First bread', harvest: 'Harvest & store', bakery: 'Farm to bakery', orders: 'Order runner'} : {starter: 'Your first row', full_field: 'The whole field', smart_farmer: 'Harvest & replant', carrots: 'A carrot patch'};
-  Object.assign(labels, {team_farmer: 'Team: farmer', team_courier: 'Team: courier', continuous: 'Continuous autopilot', crop_care: 'Smart crop care', irrigation: 'Sprinkler network', recycling: 'First recycled fertilizer', recycling_loop: 'Recycling autopilot', layout_lab: 'Layout delivery test'});
+  Object.assign(labels, {team_farmer: 'Team: farmer', team_courier: 'Team: courier', continuous: 'Continuous autopilot', crop_care: 'Smart crop care', irrigation: 'Sprinkler network', recycling: 'First recycled fertilizer', recycling_loop: 'Recycling autopilot', layout_lab: 'Layout delivery test', conveyors:'Conveyor delivery', conveyor_loop:'Conveyor farmer'});
   document.querySelector('[data-guide="recycling"]').hidden = !factory;
   document.querySelector('[data-guide="layout"]').hidden = !factory;
+  document.querySelector('[data-guide="conveyors"]').hidden = !factory;
   $('example-select').hidden = trial;
   if (trial) examples = {};
   $('example-select').innerHTML = '<option value="">Load example</option>' + Object.keys(examples).map(key => `<option value="${key}">${labels[key]}</option>`).join('');
@@ -641,6 +645,17 @@ async function changeRecycling(enabled) {
 }
 $('recycling-guide').addEventListener('click', () => openGuide('recycling'));
 $('layout-guide').addEventListener('click',()=>openGuide('layout'));
+$('conveyor-guide').addEventListener('click',()=>openGuide('conveyors'));
+
+async function changeConveyors(enabled,routes) {
+  if(!isFactory() || inTrial() || !['idle','error'].includes(mode))return;
+  const token=++requestToken;controller=new AbortController();setMode('loading','Saving conveyor routes…');
+  try {
+    const result=await api('conveyors',{state,enabled,routes},controller.signal);
+    if(token!==requestToken)return;
+    updateState(result.state);setMode('idle');save();log(result.message,'success');toast(result.message);
+  } catch(error) {if(token===requestToken){setMode('error');toast(error.message,true);}}
+}
 
 async function changeLayout(positions) {
   if (!isFactory() || inTrial() || !['idle','error'].includes(mode)) return;
@@ -699,6 +714,7 @@ async function boot() {
     crops = data.crops; careRules = data.cultivation; setupCare(careRules, changeCare); chapters = data.chapters; examples = chapters.classic.examples;
     setupRecycling(chapters.factory.catalog.recycling, changeRecycling);
     setupLayout(chapters.factory.catalog, changeLayout, placement=>{renderer.placement=placement; renderer.draw(performance.now());});
+    setupConveyors(chapters.factory.catalog,changeConveyors,path=>{renderer.conveyorPreview=path;renderer.draw(performance.now());});
     let restored = data.state, code = examples.starter, restoreMessage = null;
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('sprout.save.v1') || 'null');

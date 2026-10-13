@@ -2,7 +2,7 @@
 
 from collections import deque
 
-from . import cultivation, efficiency, challenges, recycling, layout
+from . import cultivation, efficiency, challenges, recycling, layout, conveyors
 from .engine import Farm, GameError, STAT_NAMES, empty_tile, integer, validate_state
 
 ITEMS = ("wheat", "flour", "bread")
@@ -29,7 +29,7 @@ MISSIONS = [
 FACTORY_STATS = STAT_NAMES + ("flour_milled", "bread_baked", "bread_delivered")
 ORDER = {"target": 12, "deadline": 180, "reward": 40, "unlock": 4}
 CATALOG = {"entities": ENTITIES, "obstacles": OBSTACLES, "upgrades": UPGRADES,
-           "field": {"width": 6, "height": 4}, "cargo_capacity": 8, "harvest_yield": 3, "order": ORDER, "recycling": recycling.RULES, "layout": layout.RULES}
+           "field": {"width": 6, "height": 4}, "cargo_capacity": 8, "harvest_yield": 3, "order": ORDER, "recycling": recycling.RULES, "layout": layout.RULES, "conveyors": conveyors.RULES}
 DIRECTIONS = {"east": (1, 0), "south": (0, 1), "west": (-1, 0), "north": (0, -1)}
 
 
@@ -129,6 +129,8 @@ def validate_factory(raw):
             state["recycling"] = recycling.validate(raw["recycling"], state)
         if "layout" in raw:
             state["layout"] = layout.validate(raw["layout"], state)
+        if "conveyors" in raw:
+            state["conveyors"] = conveyors.validate(raw["conveyors"], state)
         if "efficiency" in raw:
             state["efficiency"] = efficiency.validate(raw["efficiency"], state)
         if "challenge" in raw:
@@ -230,6 +232,7 @@ class Factory(Farm):
         metrics = efficiency.ensure(s)
         metrics['ticks'] += 1
         metrics['water_used'] += max(0, self._tank_before - s['care']['tank'])
+        conveyors.advance(s)
         # Transfers happen first; every machine then advances exactly once.
         for name in ("mill", "oven"):
             machine, definition = s["machines"][name], ENTITIES[name]
@@ -295,6 +298,9 @@ class Factory(Farm):
                 raise GameError("This route hits an edge or rock. Try navigate_to(x, y).")
             s["drone"].update(x=x, y=y)
             message = f"Moved {args[0]} → ({x}, {y})"
+        elif name == 'set_conveyor_feed':
+            if len(args) != 2: raise GameError('Use set_conveyor_feed("grain", True or False).')
+            message = conveyors.set_feed(s, *args)
         elif name in ("load", "unload"):
             if len(args) != 2:
                 raise GameError(f'Use {name}("wheat", amount), "flour", or "bread".')
@@ -384,7 +390,7 @@ class Factory(Farm):
 
     def query(self, name, args):
         arities = {"cargo": 1, "cargo_space": 0, "stored": 2, "free_space": 2,
-                   "machine_status": 1, "get_tick": 0, "get_delivered": 0}
+                   "machine_status": 1, "get_tick": 0, "get_delivered": 0, 'conveyor_status':1, 'conveyor_items':1}
         if len(args) != arities[name]:
             raise GameError(f"{name}() expects {arities[name]} arguments.")
         if name == "cargo":
@@ -394,5 +400,9 @@ class Factory(Farm):
             return self.state["tick"]
         if name == "get_delivered":
             return self.state["stats"]["bread_delivered"]
+        if name == 'conveyor_status': return conveyors.status(self.state, args[0])
+        if name == 'conveyor_items':
+            route = conveyors.get_route(self.state,args[0])
+            return sum(route['slots']) if route else 0
         return {"cargo_space": self.cargo_space, "stored": self.stored,
                 "free_space": self.free_space, "machine_status": self.machine_status}[name](*args)

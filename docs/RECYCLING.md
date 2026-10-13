@@ -85,4 +85,4 @@ Portable solo/team continuations preserve new materials and active batches and r
 
 Regression coverage includes all eight care combinations, per-step conservation, atomic capacity failures, output reservations, pause/resume, old and new checkpoints, team contention, usable returned supplies and HTTP configuration. In an additional 1,800-tick playtest, all eight autopilot variants delivered 54–61 bread; fertilizer-enabled variants returned 40–48 manufactured doses. These are example results, not fixed challenge scores or an optimal strategy.
 
-Existing machines can now move through [Workshop layouts](LAYOUTS.md). Extra buildings, conveyors, new recycling challenges, power and recipes remain separate proposals in [ROADMAP.md](ROADMAP.md).
+Existing machines can now move through [Workshop layouts](LAYOUTS.md). Bakery conveyors are now delivered in [CONVEYORS.md](CONVEYORS.md); Conveyor farmer supports this recycling line using drone trips. Extra buildings, recycling conveyors, new challenges, power and recipes remain proposals in [ROADMAP.md](ROADMAP.md).

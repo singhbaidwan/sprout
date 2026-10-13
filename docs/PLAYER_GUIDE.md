@@ -235,3 +235,9 @@ Run the starter, inspect **Efficiency dashboard**, Stop to edit, then **Retry wi
 In Breadworks, Stop your program and enable **Crop recycling**, below the production line. Load **First recycled fertilizer** to harvest two plots and return one compost and two fertilizer. Each harvest now puts one residue in the supply well's bounded hopper; program drones to take it through the composter and optionally the mixer. Choose whether compost goes to soil care or fertilizer production. Enable the matching Growing option to consume returned supplies.
 
 **Recycling autopilot** selects Continuous mode and runs the bakery alongside the new chain. Inspect input/output cards and two return goals. Both drones can carry the new items; all six share cargo and chest space. Full outputs stall batches, and a full residue hopper blocks harvests. Turning recycling off pauses its machines, retains stock and permits transfers. Fixed challenges keep their original rules. [Exact recipes, examples, limits, API and save behavior](RECYCLING.md).
+
+## Conveyor workshop
+
+Stop and finish any active order, then open **Conveyor workshop**. Draw connected S→D lane paths or preview Auto-connect bakery, then Apply routes. Grain, flour and bread each move on a bounded independent track. Live cards report queued stock/arrivals and input blockage. Feed off drains; Enable conveyors off freezes queues. Drain/remove before changing a path or relocating connected machines.
+
+Load **Conveyor delivery** for four loaves, or **Conveyor farmer** for Continuous growing, reserve management and optional care/recycling. `set_conveyor_feed(name, True/False)` is a remote one-tick action; `conveyor_items(name)` and `conveyor_status(name)` are queries. Names are grain, flour, bread. Both drones share gates and one belt phase. Stock queries exclude queued items. Pause belts before original manual-transfer tutorials. [Complete rules, examples and saves](CONVEYORS.md).

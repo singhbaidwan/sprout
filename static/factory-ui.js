@@ -1,5 +1,6 @@
 // Breadworks presentation reads its rules and recipes from the Python catalog.
 import {withPositions} from './layout-rules.js';
+import {describeConveyorPad} from './conveyor-rules.js';
 const $ = id => document.getElementById(id);
 const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -8,8 +9,10 @@ export function describeFactoryTile(state, catalog, x, y) {
   const entity = Object.entries(withPositions(catalog.entities,state.layout?.positions)).find(([, entity]) => entity.x === x && entity.y === y);
   if (entity) {
     const [name, def] = entity;
-    return `${def.title} · ${name === 'depot' ? `${def.price} coins per bread` : name === 'chest' ? `${Object.values(state.chest).reduce((a,b) => a+b,0)} / ${def.capacity} items` : machineLabel(state, catalog, name)}`;
+    const belt=describeConveyorPad(state,catalog,x,y);
+    return `${def.title} · ${name === 'depot' ? `${def.price} coins per bread` : name === 'chest' ? `${Object.values(state.chest).reduce((a,b) => a+b,0)} / ${def.capacity} items` : machineLabel(state, catalog, name)}${belt?' · '+belt:''}`;
   }
+  const belt=describeConveyorPad(state,catalog,x,y);if(belt)return belt;
   return x >= catalog.field.width || y >= catalog.field.height ? 'Factory lane · travel freely, no planting' : null;
 }
 
@@ -62,6 +65,9 @@ export function factoryGuide(tab, catalog, missions) {
     ['stored("mill", "flour")', 'Read completed flour. With wheat, reads mill input; active batches are excluded.'],
     ['free_space("mill", "wheat")', 'Read available input slots for this item. Chest shares capacity across items. Unsupported machine ingredients return 0.'],
     ['machine_status("oven")', 'Returns working, waiting_input, output_full, or ready.'],
+    ['set_conveyor_feed("grain", False)', 'Remote one-tick feed gate: off drains queued items; requires a built grain, flour or bread route.'],
+    ['conveyor_items("flour")', 'Count queued items separately from machine/chest stock; zero if unbuilt. No tick.'],
+    ['conveyor_status("bread")', 'Read not_installed, paused, blocked, moving, drained, ready or waiting_input. No tick.'],
     ['get_tick() / get_delivered()', 'Read world ticks / lifetime delivered bread.'],
     ['harvest()', 'Take 3 wheat from a ripe growing plot. Requires 3 cargo slots.'],
     ['move("east")', 'Move one tile; edges and rocks block movement.'],

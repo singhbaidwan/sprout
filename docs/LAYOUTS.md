@@ -1,6 +1,6 @@
 # Workshop layouts
 
-Implemented 2026-10-03. Layout planning makes transport distance a player decision in the Breadworks campaign. It relocates existing machines between programs; extra machines, construction costs, conveyors and power remain future scope.
+Implemented 2026-10-03. Layout planning makes transport distance a player decision in the Breadworks campaign. It relocates existing machines between programs; extra machines, construction costs and power remain future scope. Bakery conveyors are now implemented separately in [CONVEYORS.md](CONVEYORS.md).
 
 ## Plan, apply and measure
 
@@ -31,7 +31,7 @@ Existing solo, team and recycling examples use named machine routes. Hardcoded `
 - Pads are passable docking locations. Terrain, obstacles and farming boundaries remain fixed.
 - Moves cost no coins and no ticks. Inventories, active batches, missions, measurements, both drone positions and cargo, and growing options are preserved exactly.
 - Finish an active delivery order before applying. Planning remains available during an order. Challenges reject layout configuration and saved layout extensions, including empty ones.
-- Stop first: a checkpoint is bound to its exact world and may contain a route to an old pad. Applying after Stop starts the next program with fresh navigation.
+- Drain and remove connected conveyors before moving their machines; new machine pads also cannot overlap belt routes. Stop first: a checkpoint is bound to its exact world and may contain a route to an old pad. Applying after Stop starts the next program with fresh navigation.
 
 ## Save and HTTP contract
 
@@ -57,4 +57,4 @@ Untouched worlds keep the extension absent, preserving old solo/team controller 
 
 Compact workshop previews mill (1,6), oven (2,6), and, when installed, composter (0,4), mixer (1,4). Bakery legs change from **3/3/4** to **1/1/8** moves: easier chest/mill transfer trades off a longer depot trip. Recycling legs change from **6/4/10** to **4/1/5**. The preset starts an experiment; it is not an optimization guarantee.
 
-Tests cover transfers at new/old pads, atomic rejection/swaps, preserved stock/batches, old/custom continuations, team contention with one world phase, fixed trials, HTTP assets/configuration, delivery tests and sustained solo/team/recycling examples. Node checks verify preview routes and reserved pads. Browser checks cover apply/reload, stock preservation, keyboard focus and responsive controls. Additional machines, costs/research, conveyors, storage targets and standalone blueprint artifacts remain proposals in [ROADMAP.md](ROADMAP.md).
+Tests cover transfers at new/old pads, atomic rejection/swaps, preserved stock/batches, old/custom continuations, team contention with one world phase, fixed trials, HTTP assets/configuration, delivery tests and sustained solo/team/recycling examples. Node checks verify preview routes and reserved pads. Browser checks cover apply/reload, stock preservation, keyboard focus and responsive controls. Additional machines, costs/research, storage targets and standalone blueprint artifacts remain proposals in [ROADMAP.md](ROADMAP.md).

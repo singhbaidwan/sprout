@@ -27,3 +27,5 @@ jobs:
         run: node tests/challenge_records.mjs
       - name: Layout preview rules
         run: node tests/layout_rules.mjs
+      - name: Conveyor planning
+        run: node tests/conveyor_rules.mjs

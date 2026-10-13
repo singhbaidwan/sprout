@@ -22,6 +22,11 @@ export function validatePositions(state, catalog, positions) {
     if (occupied.has(key)) return `Pad occupied by ${occupied.get(key)}. Uninstalled recycling pads stay reserved.`;
     occupied.set(key, name);
   }
+  const resolved=withPositions(definitions,positions);
+  for(const [name,route] of Object.entries(state.conveyors?.routes||{})) {
+    const rule=catalog.conveyors.routes[name],from=resolved[rule.source],to=resolved[rule.target];
+    if(route.path[0]!==from.y*8+from.x || route.path.at(-1)!==to.y*8+to.x || route.path.slice(1,-1).some(cell=>occupied.has(`${cell%8},${Math.floor(cell/8)}`))) return 'Drain and remove connected conveyors before moving these machines.';
+  }
   return null;
 }
 

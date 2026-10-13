@@ -59,6 +59,13 @@ def configure(state, raw):
     definitions = defaults()
     positions = {name: point for name, point in positions.items()
                  if any(point[axis] != definitions[name][axis] for axis in ('x', 'y'))}
+    if 'conveyors' in state:
+        from . import conveyors
+        proposed = dict(state, layout={'version':1,'positions':positions})
+        try:
+            conveyors.validate(state['conveyors'],proposed)
+        except GameError as exc:
+            raise GameError('Drain and remove connected conveyors before moving machines onto or away from their routes.') from exc
     if positions:
         state['layout'] = {'version': 1, 'positions': positions}
     else:

@@ -5,6 +5,7 @@ import unittest
 
 from farm.engine import new_state
 from farm.factory import new_factory
+from farm import conveyors
 from farm.server import create_server
 
 
@@ -47,8 +48,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(data['chapters']['factory']['catalog']['recycling']['entities']['mixer']['output_amount'], 2)
         self.assertIn('recycling_loop', data['chapters']['factory']['examples'])
         self.assertIn('layout_lab', data['chapters']['factory']['examples'])
+        self.assertIn('conveyor_loop', data['chapters']['factory']['examples'])
         self.assertEqual(data['chapters']['factory']['catalog']['layout']['version'], 1)
-        for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/cultivation-ui.js', '/challenges-ui.js', '/recycling-ui.js', '/layout-ui.js', '/layout-rules.js', '/style.css', '/favicon.svg']:
+        for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/cultivation-ui.js', '/challenges-ui.js', '/recycling-ui.js', '/layout-ui.js', '/layout-rules.js', '/conveyor-ui.js', '/conveyor-rules.js', '/style.css', '/favicon.svg']:
             status, headers, body = self.request('GET', asset)
             self.assertEqual(status, 200)
             self.assertGreater(len(body), 100)
@@ -199,7 +201,7 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertIsNone(json.loads(body)['error'])
             for endpoint, values in [('/api/settings', {'settings': {'fertilizer': False, 'irrigation': False, 'soil': False}}),
-                                     ('/api/unlock', {'item': 'cargo'}), ('/api/order', {}), ('/api/efficiency/reset', {}), ('/api/recycling', {'enabled': True}), ('/api/layout', {'positions': {}})]:
+                                     ('/api/unlock', {'item': 'cargo'}), ('/api/order', {}), ('/api/efficiency/reset', {}), ('/api/recycling', {'enabled': True}), ('/api/layout', {'positions': {}}), ('/api/conveyors', {'enabled':True,'routes':{}})]:
                 status, _, _ = self.request('POST', endpoint, dict(state=state, **values))
                 self.assertEqual(status, 400)
             wrong = {'state': state, 'codes': ['wait()', 'wait()']} if drones == 1 else {'state': state, 'code': 'wait()'}
@@ -224,6 +226,21 @@ class ServerTests(unittest.TestCase):
                         {'state':state,'positions':{'mill':{'x':0,'y':6}}}):
             status, _, _ = self.request('POST','/api/layout',payload)
             self.assertEqual(status,400)
+
+    def test_conveyors_endpoint_builds_preserves_and_rejects_live_removal(self):
+        state=new_factory();routes={name:{'path':conveyors.auto_path(state,name),'feeding':True} for name in conveyors.ROUTES}
+        status,_,body=self.request('POST','/api/conveyors',{'state':state,'enabled':True,'routes':routes})
+        self.assertEqual(status,200);built=json.loads(body)['state']
+        self.assertEqual({k:v for k,v in built.items() if k!='conveyors'},state)
+        status,_,body=self.request('POST','/api/controller/step',{'state':built,'code':'wait()'})
+        self.assertEqual(status,200);moved=json.loads(body)['state']
+        self.assertEqual(moved['conveyors']['routes']['grain']['slots'],[1,0,0])
+        for payload in ({'state':moved,'enabled':True,'routes':{}}, {'state':new_state(),'enabled':True,'routes':{}},
+                        {'state':state,'enabled':'on','routes':routes}, {'state':state,'enabled':True,'routes':{'grain':{'path':[48,51],'feeding':True}}}):
+            status,_,_=self.request('POST','/api/conveyors',payload);self.assertEqual(status,400)
+        status,_,body=self.request('POST','/api/conveyors',{'state':moved,'enabled':False,'routes':routes})
+        self.assertEqual(status,200);paused=json.loads(body)['state']
+        self.assertEqual(paused['tick'],moved['tick']);self.assertEqual(paused['conveyors']['routes'],moved['conveyors']['routes'])
 
     def test_efficiency_reset_keeps_world_and_restarts_measurement(self):
         status, _, body = self.request('POST', '/api/run', {'state': new_factory(), 'code': 'wait()'})

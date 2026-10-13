@@ -26,6 +26,8 @@ farm.js: responsive canvas world        POST /api/run → interpreter → Farm /
 | `farm/factory.py` | Breadworks catalog, inventories, recipes, routes, upgrades, missions, orders, and strict world validation. |
 | `farm/recycling.py` | Optional residue, composter/mixer production, pause/resume and conserved-material validation. |
 | `farm/layout.py` | Atomic movable-pad validation and sparse optional layout extension. |
+| `farm/conveyors.py` | Validated bakery lane paths, bounded queues, feed gates and one shared transport phase. |
+| `static/conveyor-rules.js`, `static/conveyor-ui.js` | Route planning/backtracking, previews, queue/status cards, feed/pause controls and guide. |
 | `static/layout-rules.js`, `static/layout-ui.js` | Preview validation, shortest movement distances, keyboard placement and layout guide. |
 | `static/recycling-ui.js` | Configuration, new stock/status/goals, dynamic building catalog and recycling guide. |
 | `farm/efficiency.py` | Optional bounded counters, pre-action baselines and strict measurement validation. |
@@ -99,6 +101,8 @@ This is a small game language, not a complete implementation of Python. In parti
 All POST requests require `Content-Type: application/json`. Run/upgrade/order requests have the original 100,000-byte limit. Portable save validation permits 1,000,000 bytes for campaign chapters, the isolated challenge trial and records; controller stepping retains 600,000 bytes for programs/checkpoints, including JSON escaping overhead. HTTP errors have `{ "error": "message" }`. Script errors are part of a successful `/api/run` response so earlier frames can still play.
 
 `POST /api/layout` takes `{state, positions}` and returns `{state, message}`. It replaces the complete sparse machine-position map after validating every destination together. `{}` restores defaults. See [LAYOUTS.md](LAYOUTS.md) for placement constraints, order/trial restrictions and save compatibility.
+
+`POST /api/conveyors` takes `{state, enabled, routes}` and returns `{state, message}`. Routes contain `{path, feeding}` without client-set queues/counters; configuration retains unchanged route stock and rejects live removal/rerouting. See [CONVEYORS.md](CONVEYORS.md).
 
 | Endpoint | Input | Output |
 | --- | --- | --- |
@@ -190,3 +194,9 @@ Strict validation reconstructs bounded machine/inventory records and accounts fo
 `farm/layout.py` validates a complete sparse position map before atomic configuration. `Factory.entities()` resolves overrides against immutable catalog definitions; navigation, docking, stock queries and team planning all use that resolved catalog. Recipe timing still uses the original machine definitions and the single shared phase. Terrain and air-lane rules are unchanged.
 
 The optional extension remains absent in old worlds, and validation retains present empty extensions to preserve checkpoint hashes. Configuration prunes defaults. Layout validates after installed recycling and before fixed challenge rules. The UI discards old continuations through Stop, previews with pure bounded BFS helpers, and applies through the existing request/revision guards. Non-simulation configuration never updates efficiency counters. [Exact schema and endpoint](LAYOUTS.md).
+
+## Optional conveyor phase
+
+`conveyors.version = 1` is absent until configured. Validation runs after recycling/layout and before fixed trial checks. Three typed routes hold bounded 0/1 segment queues; every route's pickups minus arrivals must equal queued stock. Routes must still fit resolved machine locations. Rebuilds preflight all destinations and live queue ownership before any mutation. Layout configuration preflights existing conveyor paths against proposed station positions.
+
+After committed actions/crop care, `Factory.advance_systems()` advances belts before machine processing. Last-slot delivery, backward old-item hops and final pickup prevent multiple hops or same-phase movement of newly produced outputs. Depot arrivals share sales/order/mission counters without extra commands or clock ticks. Team planning uses isolated copies; only the final shared phase moves stock. Remote `set_conveyor_feed` actions reserve a named shared gate, rather than their physical tile, for fair alternating contention. Bounded/Continuous use the same action/query namespace and existing quotas. [Exact wire fields and timing](CONVEYORS.md).

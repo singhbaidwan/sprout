@@ -80,7 +80,7 @@ Upgrades: cargo 8→16 for 50 coins, mill 4→2 ticks for 75, oven 6→3 ticks f
 
 Optional orders unlock at 4 lifetime delivered bread: deliver 12 more within 180 action ticks for 40 coins. Stockpiles count; a delivery on the final tick succeeds. Failed orders preserve stock, sales, and mission progress and may be retried. Best completion time and completed-order count persist.
 
-The original factory milestone was fixed-layout and single-drone; the team extension below adds a second drone. The continuous-operation milestone below extends its execution model. Machine construction, conveyors, power, research, and online leaderboards remain future milestones. No language limit or local server boundary is relaxed for this chapter.
+The original factory milestone was fixed-layout and single-drone; the team extension below adds a second drone. The continuous-operation milestone below extends its execution model. Later milestones below add movable layouts and bakery conveyors. Machine construction, power, research, and online leaderboards remain future scope. No language limit or local server boundary is relaxed for this chapter.
 
 ## Configurable crop-care milestone — implemented
 
@@ -114,7 +114,7 @@ Exact implemented quantities, costs, deadlines, and APIs are in [CROP_CARE.md](C
 | D08 | Runnable automation | Continuous farming and bakery examples sustain production with all eight growing-option combinations. |
 | D09 | Verification | Interpreter parity, deterministic retry, malformed checkpoints, failure boundaries, real HTTP tests, and browser controls are checked. |
 
-This milestone serves one drone and retains full snapshots. The following team milestone adds multi-controller scheduling; buildable factories, conveyors, offline progress, and public hosting remain unimplemented. See [CONTINUOUS.md](CONTINUOUS.md) for exact limits, endpoint/schema details, and pause boundaries.
+This milestone serves one drone and retains full snapshots. The following team milestone adds multi-controller scheduling; later milestones below add layouts and conveyors. Extra factories, offline progress, and public hosting remain unimplemented. See [CONTINUOUS.md](CONTINUOUS.md) for exact limits, endpoint/schema details, and pause boundaries.
 
 
 ## Optional two-drone team — implemented
@@ -163,7 +163,7 @@ Exact rules, definitions, score bounds and schema are in [CHALLENGES.md](CHALLEN
 | R09 | Compatible conserved saves | Optional versioned extension; old item maps and checkpoint digests remain unchanged until enablement. Ledger includes stock, active ingredients and cumulative exports; malformed/lost/duplicated material fails validation. |
 | R10 | Playable examples | Finite first-fertilizer demo and Continuous bakery/recycler controller; all eight growing-option combinations pass. Existing bakery and six challenge starters remain playable. |
 
-Exact operational limits and schema are in [RECYCLING.md](RECYCLING.md). Original crop-care requirement C05 retains instant compost except when this independent module is on. Existing machines now support relocation as specified below. Extra buildings, conveyors, fuel/power and recipes remain proposals.
+Exact operational limits and schema are in [RECYCLING.md](RECYCLING.md). Original crop-care requirement C05 retains instant compost except when this independent module is on. Existing machines now support relocation as specified below. Bakery conveyors are delivered below. Extra buildings, recycling belts, fuel/power and recipes remain proposals.
 
 ## Workshop layout planning — implemented 2026-10-03
 
@@ -177,4 +177,20 @@ Exact operational limits and schema are in [RECYCLING.md](RECYCLING.md). Origina
 | L06 | Fair scenarios | Stop before editing; active orders block apply; fixed trials reject configuration and even empty layout extensions. |
 | L07 | Playable comparison | Four-loaf delivery test works on defaults/custom pads; named-route solo/team/recycling examples sustain custom layouts. |
 
-See [LAYOUTS.md](LAYOUTS.md) for exact pads, schemas and benchmark assumptions. Extra machine construction, construction costs, conveyors and standalone blueprint sharing remain separate proposals.
+See [LAYOUTS.md](LAYOUTS.md) for exact pads, schemas and benchmark assumptions. Bakery conveyors are delivered below. Extra machine construction, costs and standalone blueprint sharing remain separate proposals.
+
+## Bakery conveyors — implemented 2026-10-14
+
+| ID | Requirement | Acceptance criterion |
+| --- | --- | --- |
+| V01 | Optional infrastructure | Campaign-only grain/flour/bread routes. Untouched old saves/checkpoint bindings remain unchanged; pause retains installed queues. |
+| V02 | Bounded paths | Two to 32 unique cardinally adjacent pads with current-layout endpoints; crop/rock/unrelated/reserved building pads rejected. |
+| V03 | Conserved transport | One item per segment; one pickup/hop per shared phase; full inputs create backpressure with no loss/duplication. Products made this phase move next phase. |
+| V04 | Programmable policy | Strict boolean remote feed action and bounded status/item queries. Feed off drains; master pause freezes. |
+| V05 | Fair shared resources | Both drones share gates with rotating contention; belts advance once. Automatic sales resolve normal order deadlines/missions once. |
+| V06 | Safe construction | Config takes no coins/ticks. Live removal/reroute and incompatible machine relocation fail atomically; unchanged paths retain queues and counters. |
+| V07 | Visible controls | Keyboard path drawing/backtracking, auto-route/network preview, editable feed/pause, queue/arrival cards, canvas arrows/items, guide and compatible mobile layout. |
+| V08 | Recovery | Strict optional version 1 extension; pickup/arrival/queue ledger balance; portable solo/team continuations retain paths and stock and restore paused. |
+| V09 | Playable examples | Finite four-loaf demo and Continuous farmer, with four-wheat reserve and all crop-care/recycling combinations supported. Manual tutorials remain usable with belts paused. |
+
+See [CONVEYORS.md](CONVEYORS.md) for implemented timing, API and limits. Three independent tracks can cross but do not merge; splitters, research/costs, recycling belts and additional factories remain proposals.

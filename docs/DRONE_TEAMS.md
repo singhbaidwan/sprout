@@ -58,3 +58,7 @@ Installed recycling adds residue, compost and fertilizer to both drones' cargo m
 ## Custom workshop layouts
 
 Stop both controllers before [moving existing machines](LAYOUTS.md). All positions, cargo and machine stock/batches survive placement. Both programs' named routes use the new pads, and shared work-slot contention follows those pads. Moving does not advance either drone or the shared world. Portable team checkpoints retain layouts and restore paused.
+
+## Shared conveyor controls
+
+[Conveyors](CONVEYORS.md) advance once after both committed commands, regardless of drone count. Remote feed switches share a named gate resource: simultaneous changes to the same gate alternate priority and retry; different gate changes can both succeed. Drone transfers resolve before the belt phase, so a belt cannot take stock already loaded by a drone that tick. Belt arrivals and next machine products are visible at the following observation. Portable team checkpoints preserve all queue items and gates.

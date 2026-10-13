@@ -42,7 +42,7 @@ export class FarmRenderer {
     this.layout();
     if (first || this.reduced.matches || Math.abs(this.drone.x - state.drone.x) > 2 || Math.abs(this.drone.y - state.drone.y) > 2) this.drone = { ...state.drone };
     if (action === 'harvest' || action === 'water' || action === 'plant') this.effect = { action, x: state.drone.x, y: state.drone.y, start: performance.now() };
-    this.canvas.setAttribute('aria-label', `${state.scenario === 'factory' ? `Breadworks with chest, mill, oven, delivery depot${state.recycling ? ', supply well, composter, and fertilizer mixer' : ''}. ` : ''}${state.size} by ${state.size} farm. Drone at ${state.drone.x}, ${state.drone.y}. ${state.stats.harvested} crops harvested. ${state.team ? `Drone 2 at ${state.team.drone.x}, ${state.team.drone.y}. ` : ''}Use Inspect plots for details.`);
+    this.canvas.setAttribute('aria-label', `${state.scenario === 'factory' ? `Breadworks with chest, mill, oven, delivery depot${state.recycling ? ', supply well, composter, and fertilizer mixer' : ''}. ` : ''}${state.size} by ${state.size} farm. Drone at ${state.drone.x}, ${state.drone.y}. ${state.stats.harvested} crops harvested. ${state.team ? `Drone 2 at ${state.team.drone.x}, ${state.team.drone.y}. ` : ''}${state.conveyors ? `Conveyors: ${Object.entries(state.conveyors.routes).map(([name,r])=>`${name} ${r.slots.reduce((a,b)=>a+b,0)} items queued`).join(', ')}. ` : ''}Use Inspect plots for details.`);
     this.draw(performance.now());
   }
   point(x, y) { return { x: this.originX + (x - y) * this.unit, y: this.originY + (x + y) * this.half }; }
@@ -225,6 +225,7 @@ export class FarmRenderer {
         for (const [dx,dy] of [[-.3,-.02],[.26,-.03],[0,.29]]) this.crop(p.x+dx*u,p.y+dy*v,tile);
       }
     }
+    if(s.scenario==='factory') this.drawConveyors();
     for (const index of s.care.sprinklers) {
       const p=this.point(index%n+.5,Math.floor(index/n)+.5);
       const active=s.care.settings.irrigation && s.care.pump && s.care.tank>0;
@@ -267,6 +268,27 @@ export class FarmRenderer {
     for(let i=0;i<n;i++) { const a=this.point(n+.36,i+.5), b=this.point(i+.5,n+.4); c.fillText(String(i),a.x,a.y+4); c.fillText(String(i),b.x,b.y+4); }
     this.drawDrone(time, this.drone, false);
     if (s.team) this.drawDrone(time, this.secondDrone, true);
+  }
+  drawConveyors() {
+    const s=this.state,c=this.ctx,u=this.unit;
+    const colors={grain:'#a98539',flour:'#7c91a4',bread:'#ba7958'};
+    const drawTrack=(name,path,slots=[],draft=false)=>{
+      const points=path.map(cell=>this.point(cell%8+.5,Math.floor(cell/8)+.5));
+      for(let i=1;i<points.length;i++) {
+        const a=points[i-1],b=points[i],color=draft?'#396f9b':colors[name];
+        this.line(a.x,a.y,b.x,b.y,draft?'#6b9fca55':'#eeead2',Math.max(4,u*.22));
+        this.line(a.x,a.y,b.x,b.y,color,draft?2:Math.max(2,u*.09));
+        const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,angle=Math.atan2(b.y-a.y,b.x-a.x),size=Math.max(3,u*.13);
+        this.line(mx,my,mx-Math.cos(angle-.6)*size,my-Math.sin(angle-.6)*size,color,1.5);
+        this.line(mx,my,mx-Math.cos(angle+.6)*size,my-Math.sin(angle+.6)*size,color,1.5);
+      }
+      for(let i=0;i<slots.length;i++)if(slots[i]) {
+        const p=points[i];this.ellipse(p.x,p.y-2,Math.max(3,u*.14),Math.max(2,u*.1),name==='flour'?'#f8f5e4':name==='grain'?'#e3bc57':'#db9c6b');
+        c.strokeStyle=colors[name];c.lineWidth=1;c.stroke();
+      }
+    };
+    for(const [name,r] of Object.entries(s.conveyors?.routes||{}))drawTrack(name,r.path,r.slots);
+    if(this.conveyorPreview)drawTrack(this.conveyorPreview.name,this.conveyorPreview.path,[],true);
   }
   drawDrone(time, drone, second) {
     const c = this.ctx, u = this.unit;

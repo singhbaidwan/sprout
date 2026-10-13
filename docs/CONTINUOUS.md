@@ -83,3 +83,7 @@ Breadworks offers **Recycling autopilot**, which automatically selects Continuou
 ## Moving workshop machines
 
 Breadworks supports [Workshop layouts](LAYOUTS.md). Stop first to discard any saved route; a paused checkpoint also disables placement until stopped. Apply costs no ticks and keeps stock/batches. Named `navigate_to()` calls follow the next program's new pads. Saved custom-layout controllers resume their exact routes after reload/import, paused as usual. Moving outside the UI invalidates an older world's checkpoint digest.
+
+## Conveyors and feed policies
+
+[Conveyors](CONVEYORS.md) advance once per action boundary, before machines. Continuous reloads retain every segment and feed switch, paused. Master transport pause freezes queues even if a program continues crop work. `set_conveyor_feed()` itself costs a tick; off prevents pickups and allows old items to drain. The supplied Conveyor farmer selects Continuous and demonstrates a four-wheat reserve with a per-tick burst loop. Stop to build or configure infrastructure.

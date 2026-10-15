@@ -2,7 +2,7 @@
 
 from collections import deque
 
-from . import cultivation, efficiency, challenges, recycling, layout, conveyors
+from . import cultivation, efficiency, challenges, recycling, layout, conveyors, stock_policy
 from .engine import Farm, GameError, STAT_NAMES, empty_tile, integer, validate_state
 
 ITEMS = ("wheat", "flour", "bread")
@@ -301,6 +301,12 @@ class Factory(Farm):
         elif name == 'set_conveyor_feed':
             if len(args) != 2: raise GameError('Use set_conveyor_feed("grain", True or False).')
             message = conveyors.set_feed(s, *args)
+        elif name == 'set_conveyor_policy':
+            if len(args)!=3: raise GameError('Use set_conveyor_policy("grain", reserve, target).')
+            message=stock_policy.set_policy(s,args[0],{'version':1,'reserve':args[1],'target':args[2]})
+        elif name == 'clear_conveyor_policy':
+            if len(args)!=1: raise GameError('Use clear_conveyor_policy("grain").')
+            message=stock_policy.clear_policy(s,args[0])
         elif name in ("load", "unload"):
             if len(args) != 2:
                 raise GameError(f'Use {name}("wheat", amount), "flour", or "bread".')
@@ -390,7 +396,7 @@ class Factory(Farm):
 
     def query(self, name, args):
         arities = {"cargo": 1, "cargo_space": 0, "stored": 2, "free_space": 2,
-                   "machine_status": 1, "get_tick": 0, "get_delivered": 0, 'conveyor_status':1, 'conveyor_items':1}
+                   "machine_status": 1, "get_tick": 0, "get_delivered": 0, 'conveyor_status':1, 'conveyor_items':1, 'conveyor_reserve':1, 'conveyor_target':1}
         if len(args) != arities[name]:
             raise GameError(f"{name}() expects {arities[name]} arguments.")
         if name == "cargo":
@@ -404,5 +410,8 @@ class Factory(Farm):
         if name == 'conveyor_items':
             route = conveyors.get_route(self.state,args[0])
             return sum(route['slots']) if route else 0
+        if name in ('conveyor_reserve','conveyor_target'):
+            route=conveyors.get_route(self.state,args[0])
+            return (route or {}).get('policy',{}).get('reserve' if name=='conveyor_reserve' else 'target',0 if name=='conveyor_reserve' else None)
         return {"cargo_space": self.cargo_space, "stored": self.stored,
                 "free_space": self.free_space, "machine_status": self.machine_status}[name](*args)

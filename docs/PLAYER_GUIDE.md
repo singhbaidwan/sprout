@@ -241,3 +241,9 @@ In Breadworks, Stop your program and enable **Crop recycling**, below the produc
 Stop and finish any active order, then open **Conveyor workshop**. Draw connected S→D lane paths or preview Auto-connect bakery, then Apply routes. Grain, flour and bread each move on a bounded independent track. Live cards report queued stock/arrivals and input blockage. Feed off drains; Enable conveyors off freezes queues. Drain/remove before changing a path or relocating connected machines.
 
 Load **Conveyor delivery** for four loaves, or **Conveyor farmer** for Continuous growing, reserve management and optional care/recycling. `set_conveyor_feed(name, True/False)` is a remote one-tick action; `conveyor_items(name)` and `conveyor_status(name)` are queries. Names are grain, flour, bread. Both drones share gates and one belt phase. Stock queries exclude queued items. Pause belts before original manual-transfer tutorials. [Complete rules, examples and saves](CONVEYORS.md).
+
+### Stock targets
+
+Choose a built route and set its source reserve/destination target in Conveyor workshop, or use Balanced stock targets. The target counts input, active ingredients and transit; empty means unlimited, zero stops new pickups. Clear selected policy preserves its feed switch. Lowering limits keeps queued items. Bread only has an oven reserve because depot arrivals sell immediately.
+
+Load **Stock target demo** with twelve wheat to deliver four loaves while retaining four wheat. **Target-managed farmer** selects Continuous and handles enabled care/recycling without a repeated grain-feed polling loop. Python can call `set_conveyor_policy("grain",4,6)`, `clear_conveyor_policy("grain")`, `conveyor_reserve("grain")` and `conveyor_target("grain")`. Holds report `reserve_held` / `target_met`. [Exact limits and saves](STOCK_TARGETS.md).

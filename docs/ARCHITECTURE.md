@@ -27,6 +27,7 @@ farm.js: responsive canvas world        POST /api/run → interpreter → Farm /
 | `farm/recycling.py` | Optional residue, composter/mixer production, pause/resume and conserved-material validation. |
 | `farm/layout.py` | Atomic movable-pad validation and sparse optional layout extension. |
 | `farm/conveyors.py` | Validated bakery lane paths, bounded queues, feed gates and one shared transport phase. |
+| `farm/stock_policy.py` | Optional source reserves, committed-work targets, atomic policy updates and runtime policy actions. |
 | `static/conveyor-rules.js`, `static/conveyor-ui.js` | Route planning/backtracking, previews, queue/status cards, feed/pause controls and guide. |
 | `static/layout-rules.js`, `static/layout-ui.js` | Preview validation, shortest movement distances, keyboard placement and layout guide. |
 | `static/recycling-ui.js` | Configuration, new stock/status/goals, dynamic building catalog and recycling guide. |
@@ -103,6 +104,8 @@ All POST requests require `Content-Type: application/json`. Run/upgrade/order re
 `POST /api/layout` takes `{state, positions}` and returns `{state, message}`. It replaces the complete sparse machine-position map after validating every destination together. `{}` restores defaults. See [LAYOUTS.md](LAYOUTS.md) for placement constraints, order/trial restrictions and save compatibility.
 
 `POST /api/conveyors` takes `{state, enabled, routes}` and returns `{state, message}`. Routes contain `{path, feeding}` without client-set queues/counters; configuration retains unchanged route stock and rejects live removal/rerouting. See [CONVEYORS.md](CONVEYORS.md).
+
+`POST /api/conveyor/policies` takes `{state, policies}`: at most three built route names mapped to `{version:1, reserve, target}` or `null` for clear. Preflight is atomic; the response is `{state, message}` without advancing time. [Policy rules and compatibility](STOCK_TARGETS.md).
 
 | Endpoint | Input | Output |
 | --- | --- | --- |
@@ -200,3 +203,9 @@ The optional extension remains absent in old worlds, and validation retains pres
 `conveyors.version = 1` is absent until configured. Validation runs after recycling/layout and before fixed trial checks. Three typed routes hold bounded 0/1 segment queues; every route's pickups minus arrivals must equal queued stock. Routes must still fit resolved machine locations. Rebuilds preflight all destinations and live queue ownership before any mutation. Layout configuration preflights existing conveyor paths against proposed station positions.
 
 After committed actions/crop care, `Factory.advance_systems()` advances belts before machine processing. Last-slot delivery, backward old-item hops and final pickup prevent multiple hops or same-phase movement of newly produced outputs. Depot arrivals share sales/order/mission counters without extra commands or clock ticks. Team planning uses isolated copies; only the final shared phase moves stock. Remote `set_conveyor_feed` actions reserve a named shared gate, rather than their physical tile, for fair alternating contention. Bounded/Continuous use the same action/query namespace and existing quotas. [Exact wire fields and timing](CONVEYORS.md).
+
+## Optional stock policies
+
+A route's optional `policy.version = 1` remains absent on old worlds, preserving digest identity. Conveyor validation accepts exactly the old route fields plus this optional validated object. UI plans and server rebuilds retain policy fields through pause/feed changes and empty reroutes; explicit clearing removes them. Policy batch configuration preflights all route names/values before mutation.
+
+The existing conveyor phase checks post-action source stock and post-arrival/hop destination committed work immediately before pickup. Committed work includes destination input, active batch ingredient reservation and all route slots. Limits constrain new pickups rather than normalizing old stock, so lower targets do not alter conservation or active production. Set/clear actions share the named gate resource with feed actions; no scheduler phase or checkpoint/envelope version is added. [Schema/API](STOCK_TARGETS.md).

@@ -43,8 +43,31 @@ export function conveyorStatus(state,name) {
   if(route.slots.at(-1) && target && state.machines[target].input>=12) return 'Blocked · input full';
   if(route.slots.some(Boolean)) return 'Moving';
   if(!route.feeding) return 'Drained · feed off';
+  return {ready:'Ready · feed on',target_met:'Holding · target met',reserve_held:'Holding · reserve kept',waiting_input:`Waiting for ${name==='grain'?'wheat':name}`}[intakeStatus(state,name)];
+}
+
+export function committedStock(state,name) {
+  if(name==='bread')return null;
+  const route=state.conveyors?.routes[name];if(!route)return 0;
+  const machine=state.machines[name==='grain'?'mill':'oven'];
+  return machine.input+route.slots.reduce((a,b)=>a+b,0)+(machine.remaining?(name==='grain'?2:1):0);
+}
+export function intakeStatus(state,name) {
+  const route=state.conveyors?.routes[name];if(!route)return 'not_installed';
+  if(!state.conveyors.enabled)return 'paused';
+  if(!route.feeding)return 'feed_off';
+  const policy=route.policy;
+  if(policy && policy.target!==null && committedStock(state,name)>=policy.target)return 'target_met';
   const stock=name==='grain'?state.chest.wheat:state.machines[name==='flour'?'mill':'oven'].output;
-  return stock ? 'Ready · feed on' : `Waiting for ${name==='grain'?'wheat':name}`;
+  if(!stock)return 'waiting_input';
+  return policy && stock<=policy.reserve?'reserve_held':'ready';
+}
+export function policyProblem(name,reserve,target) {
+  if(!['grain','flour','bread'].includes(name))return 'Choose a bakery conveyor.';
+  if(!Number.isInteger(reserve) || reserve<0 || reserve>(name==='grain'?48:8))return `Reserve must be a whole number from 0 to ${name==='grain'?48:8}.`;
+  if(name==='bread' && target!==null)return 'The depot sells directly; bread has no destination target.';
+  if(target!==null && (!Number.isInteger(target) || target<0 || target>12))return 'Target must be blank or a whole number from 0 to 12.';
+  return null;
 }
 
 export function describeConveyorPad(state,catalog,x,y) {

@@ -4,7 +4,7 @@
 
 Sprout is a playable, single-player browser game with a Python simulation. Write a short program, watch your drone work, earn harvest income, and improve your routine. The project runs locally with **no third-party dependencies**.
 
-**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. Breadworks includes an optional two-drone team, three reproducible challenges, an efficiency dashboard, optional residue → compost → fertilizer production, saved workshop layouts, and programmable bakery conveyors. The [roadmap](docs/ROADMAP.md) distinguishes implemented mechanics from proposed splitters and power.
+**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. Breadworks includes an optional two-drone team, three reproducible challenges, an efficiency dashboard, optional residue → compost → fertilizer production, saved workshop layouts, programmable bakery conveyors, and stock targets. The [roadmap](docs/ROADMAP.md) distinguishes implemented mechanics from proposed splitters and power.
 
 ## Quick start
 
@@ -72,6 +72,12 @@ Use **Layout delivery test** to compare the same four-loaf program: on a fresh f
 Stop in Breadworks, open **Conveyor workshop**, choose **Auto-connect bakery**, then **Apply routes**. Draw custom lane paths to change capacity and travel delay. Each segment holds one item, and each world tick moves items at most one pad; full inputs back up the queue.
 
 Load **Conveyor delivery** for a finite four-loaf demo, then **Conveyor farmer** for Continuous crop-care and recycling automation. Use `set_conveyor_feed("grain", False)` to drain a line, and `conveyor_items()` / `conveyor_status()` to program its policy. Pausing keeps every queued item. [Rules, Python API and saves](docs/CONVEYORS.md).
+
+## Keep reserves and regulate production
+
+In Conveyor workshop, choose a built route and set **Stock targets**. Reserve wheat for drone jobs or cap the mill/oven's committed ingredients, including active batches and in-transit items. Policies run every tick while your program works elsewhere. Balanced stock targets offers a starting preset; Clear restores manual-feed behavior.
+
+Load **Stock target demo** to deliver four loaves while retaining four chest wheat, or **Target-managed farmer** for Continuous care/recycling automation. Python can use `set_conveyor_policy("grain", 4, 6)` and read the saved limits. [Stock policy rules, API and saves](docs/STOCK_TARGETS.md).
 
 ## Recycle your harvests
 
@@ -145,7 +151,7 @@ Run from the project root:
 python3 -m unittest discover -s tests -v
 ```
 
-The Python regression suite covers both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, two-drone arbitration/conservation, fixed challenge budgets, old checkpoint compatibility, measurement accuracy, isolated trial saves, HTTP endpoints, and optional recycling conservation, machine reservations, stock limits, toggles new solo/team save recovery, atomic machine placement, moved routes, layout-aware controllers, conveyor conservation/backpressure, safe draining and rebuilding, and all sixteen care/recycling conveyor-farmer variants. Tests use temporary loopback sockets. This milestone is validated locally on Python 3.12; prior milestones were also validated on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
+The Python regression suite covers both campaigns, conserved factory items, atomic transfers, obstacles, machine timing, delivery deadlines, save migration, upgrades, all eight combinations of growing options, irrigation/soil/fertilizer rules, language limits, continuous execution/checkpoint recovery, deterministic retries, two-drone arbitration/conservation, fixed challenge budgets, old checkpoint compatibility, measurement accuracy, isolated trial saves, HTTP endpoints, and optional recycling conservation, machine reservations, stock limits, toggles new solo/team save recovery, atomic machine placement, moved routes, layout-aware controllers, conveyor conservation/backpressure, safe draining and rebuilding, and all sixteen care/recycling conveyor-farmer variants, and stock-policy limits, preserved continuations and target-managed farming. Tests use temporary loopback sockets. This milestone is validated locally on Python 3.12; prior milestones were also validated on Python 3.14. GitHub Actions now runs a Python 3.10–3.14 matrix plus JavaScript syntax checks; remote CI results are separate from local validation.
 
 Optional JavaScript syntax checks, if Node.js is available (POSIX shell):
 
@@ -177,6 +183,7 @@ sprout/
 │   ├── recycling.py        # Optional conserved byproduct production
 │   ├── layout.py           # Atomic machine placement and optional save schema
 │   ├── conveyors.py        # Bounded queues, feed gates, paths and shared transport
+│   ├── stock_policy.py     # Optional source reserves and committed-work targets
 │   ├── efficiency.py       # Shared-clock measurement windows
 │   ├── challenges.py       # Fixed trial rules and score validation
 │   ├── team.py             # Two bounded controllers, one clock
@@ -197,7 +204,7 @@ Completed, verified features and milestones are committed and pushed to `origin`
 
 ## Where the game could go next
 
-Cooperating drones, efficiency measurements, challenges, crop recycling and machine layout planning are implemented. Limited bakery conveyors are also implemented. The next proposed logistics step is storage targets or programmable splitters. Extra machines, power, research, and larger fleets remain proposals. See the [reference-game research and design priorities](docs/DESIGN_DIRECTION.md).
+Cooperating drones, efficiency measurements, challenges, crop recycling and machine layout planning are implemented. Limited bakery conveyors are also implemented. Stock targets now regulate sources and destination work. The next proposed logistics step is programmable splitters or branch routing. Extra machines, power, research, and larger fleets remain proposals. See the [reference-game research and design priorities](docs/DESIGN_DIRECTION.md).
 
 Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/save design.
 
@@ -212,6 +219,7 @@ Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/s
 | [Crop recycling](docs/RECYCLING.md) | Byproduct recipes, transport, toggles, conservation, and examples |
 | [Workshop layouts](docs/LAYOUTS.md) | Movable machines, route previews, delivery test, and saves |
 | [Conveyors](docs/CONVEYORS.md) | Lane routes, bounded queues, Python feed controls, draining and saves |
+| [Stock targets](docs/STOCK_TARGETS.md) | Source reserves, committed-work limits, feedback, Python policies and saves |
 | [Crop care](docs/CROP_CARE.md) | Configurable systems, supplies, equipment, and automation API |
 | [Architecture](docs/ARCHITECTURE.md) | Modules, state, execution, storage, and limits |
 | [Roadmap](docs/ROADMAP.md) | Suggested improvements and programmable factory concept |

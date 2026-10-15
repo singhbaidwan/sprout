@@ -47,6 +47,8 @@ A fresh item needs `segment_count + 1` enabled ticks from pickup phase to arriva
 
 ## Implemented Python API
 
+Optional [stock targets](STOCK_TARGETS.md) now add `set_conveyor_policy`, `clear_conveyor_policy`, `conveyor_reserve` and `conveyor_target`. Feed-on is permission to pick up, while the policy may still hold intake. Targets count input, active ingredients and transit; lowering them keeps all existing stock. The new `reserve_held` / `target_met` statuses explain empty-queue holds. Legacy unpoliced routes keep the rules below.
+
 | Call | Effect |
 | --- | --- |
 | `set_conveyor_feed("grain", True)` | Remote gate action from any drone pad. Requires a built route and strict boolean. Costs one shared tick; turning off prevents that phase's pickup. |
@@ -93,4 +95,4 @@ Validation requires exact keys, strict booleans/integers, connected paths matchi
 
 Tests cover hop latency, throughput, new-output timing, material conservation in every demo frame, full inputs and recovery, pause/drain, atomic rerouting/removal, machine-layout compatibility, old/new portable controllers, deterministic retries, gate contention, final-tick order success, schema bounds, endpoints and all sixteen care/recycling farmer variants. Node checks cover editor paths, reserved pads, custom layouts and relocation guards. Browser QA covers keyboard drawing, queues across reload, pause/drain/remove, demos, guides and responsive rendering.
 
-Construction costs, additional machines, programmable splitters, storage targets, recycling routes, power and infrastructure-specific challenges remain independent proposals in [ROADMAP.md](ROADMAP.md).
+Source reserves and committed-work targets are now implemented in [STOCK_TARGETS.md](STOCK_TARGETS.md). Construction costs, additional machines, programmable splitters, recycling routes, power and infrastructure-specific challenges remain independent proposals in [ROADMAP.md](ROADMAP.md).

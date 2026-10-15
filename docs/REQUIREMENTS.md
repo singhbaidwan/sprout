@@ -194,3 +194,19 @@ See [LAYOUTS.md](LAYOUTS.md) for exact pads, schemas and benchmark assumptions. 
 | V09 | Playable examples | Finite four-loaf demo and Continuous farmer, with four-wheat reserve and all crop-care/recycling combinations supported. Manual tutorials remain usable with belts paused. |
 
 See [CONVEYORS.md](CONVEYORS.md) for implemented timing, API and limits. Three independent tracks can cross but do not merge; splitters, research/costs, recycling belts and additional factories remain proposals.
+
+## Conveyor stock targets — implemented 2026-10-16
+
+| ID | Requirement | Acceptance criterion |
+| --- | --- | --- |
+| S01 | Optional policies | Per-route source reserve and optional destination target. Unpoliced legacy routes keep behavior and checkpoint identity. |
+| S02 | Committed work | Target includes machine input, active batch ingredients and all transit stock; checked before each pickup. |
+| S03 | Safe limit changes | No time/coins for workshop edits; queues, batches, cargo and counters remain. Lower limits hold future intake without destroying existing stock. |
+| S04 | Explicit controls | Manual feed off and master pause take precedence. Clear removes only the policy; route rebuilds retain it unless explicitly removed. |
+| S05 | Bounded Python | Two one-tick remote policy actions and two zero-tick queries; strict integers, None for unlimited, bread has no destination ceiling. |
+| S06 | Shared gate fairness | Feed/set/clear on one route contend through the same rotating team resource. Transport still advances once per world tick. |
+| S07 | Visible diagnosis | Route cards, intake reason, committed total, value bounds, balanced preset and sub-batch warning explain holds. |
+| S08 | Recovery and fixed trials | Optional strict version 1 policy survives portable solo/team saves, restores paused, and remains excluded from fixed challenges. |
+| S09 | Playable examples | Finite demo retains four wheat and delivers four bread; target-managed Continuous farmer sustains every care/recycling combination. |
+
+Exact semantics, compatibility and endpoint are in [STOCK_TARGETS.md](STOCK_TARGETS.md). Limits regulate the existing three routes; generic storage logistics and splitters remain separate proposals.

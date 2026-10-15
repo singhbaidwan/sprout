@@ -21,8 +21,8 @@ MAX_SEQUENCE = 1000
 ACTIONS = {"move", "till", "plant", "water", "harvest", "wait"}
 QUERIES = {"can_harvest", "get_crop", "get_water", "get_x", "get_y", "get_size", "get_coins", "is_tilled"}
 BUILTINS = {"range", "len", "min", "max", "abs", "int", "str", "print"}
-FACTORY_ACTIONS = {"load", "unload", "navigate_to", "set_conveyor_feed"}
-FACTORY_QUERIES = {"cargo", "cargo_space", "stored", "free_space", "machine_status", "get_tick", "get_delivered", "conveyor_status", "conveyor_items"}
+FACTORY_ACTIONS = {"load", "unload", "navigate_to", "set_conveyor_feed", "set_conveyor_policy", "clear_conveyor_policy"}
+FACTORY_QUERIES = {"cargo", "cargo_space", "stored", "free_space", "machine_status", "get_tick", "get_delivered", "conveyor_status", "conveyor_items", "conveyor_reserve", "conveyor_target"}
 RESERVED = ACTIONS | QUERIES | BUILTINS | FACTORY_ACTIONS | FACTORY_QUERIES | cultivation.ACTIONS | cultivation.QUERIES
 ALLOWED = (
     ast.Module, ast.Expr, ast.Assign, ast.AugAssign, ast.If, ast.For,

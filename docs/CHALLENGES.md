@@ -70,3 +70,5 @@ Bootstrap includes the challenge catalog. Save validation now permits up to 1,00
 Optional campaign recycling is excluded from all version 1 trial worlds, including its disabled extension. The configuration endpoint rejects changes during trials, so the six starter baselines and comparable records retain their original item catalog and clock. Campaign measurements include all cargo when counting empty moves and transfers; mill/oven utilization graphs still describe bakery machines only. [Campaign recycling rules](RECYCLING.md).
 
 Bakery conveyors are campaign infrastructure, documented in [CONVEYORS.md](CONVEYORS.md). Trials reject conveyor configuration and saved extensions even when disabled/empty, retaining the original comparable rule sets and records.
+
+[Stock targets](STOCK_TARGETS.md) extend campaign conveyor routes. The policy endpoint rejects trials even for empty updates. No trial catalog, score definition or record migration changes in this milestone.

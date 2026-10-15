@@ -87,3 +87,7 @@ Breadworks supports [Workshop layouts](LAYOUTS.md). Stop first to discard any sa
 ## Conveyors and feed policies
 
 [Conveyors](CONVEYORS.md) advance once per action boundary, before machines. Continuous reloads retain every segment and feed switch, paused. Master transport pause freezes queues even if a program continues crop work. `set_conveyor_feed()` itself costs a tick; off prevents pickups and allows old items to drain. The supplied Conveyor farmer selects Continuous and demonstrates a four-wheat reserve with a per-tick burst loop. Stop to build or configure infrastructure.
+
+## Stock targets during other drone work
+
+[Stock policies](STOCK_TARGETS.md) enforce source reserves and destination committed-work targets on every transport phase, including long navigation or crop-care loops. Target-managed farmer sets policies once, then farms continuously. Policy values, queues and active batches save with the continuation and restore paused. Set/clear are remote one-tick actions; Stop is still required for no-tick workshop edits.

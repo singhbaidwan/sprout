@@ -123,7 +123,7 @@ def step_team(codes, state, checkpoint=None):
             continue
         name, args, _ = vm.intent
         position = state['team']['drone'] if drone else state['drone']
-        resource = ('conveyor', args[0]) if name == 'set_conveyor_feed' else (position['x'], position['y']) if name not in ('move', 'wait') else None
+        resource = ('conveyor', args[0]) if name in ('set_conveyor_feed','set_conveyor_policy','clear_conveyor_policy') else (position['x'], position['y']) if name not in ('move', 'wait') else None
         blocked = resource is not None and resource in reserved
         if drone:
             swap_drone(farm.state)

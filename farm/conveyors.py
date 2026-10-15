@@ -1,13 +1,14 @@
 """Bounded bakery belts: one item per segment, one hop per shared phase."""
 from collections import deque
 from .common import GameError, integer
+from . import stock_policy
 
 ROUTES = {
     'grain': {'title': 'Grain feed', 'source': 'chest', 'target': 'mill', 'item': 'wheat'},
     'flour': {'title': 'Flour transfer', 'source': 'mill', 'target': 'oven', 'item': 'flour'},
     'bread': {'title': 'Bread delivery', 'source': 'oven', 'target': 'depot', 'item': 'bread'},
 }
-RULES = {'version': 1, 'routes': ROUTES, 'max_path': 32, 'capacity': 1}
+RULES = {'version': 1, 'routes': ROUTES, 'max_path': 32, 'capacity': 1, 'stock_policy':stock_policy.RULES}
 
 
 def stations(state):
@@ -64,7 +65,7 @@ def validate(raw, state):
         raise GameError('A bakery supports at most three conveyor routes.')
     clean = {'version':1, 'enabled':raw['enabled'], 'routes':{}}
     for name, route in routes.items():
-        if not isinstance(route, dict) or set(route) != {'path','feeding','slots','picked','delivered'} or type(route['feeding']) is not bool:
+        if not isinstance(route, dict) or set(route) not in ({'path','feeding','slots','picked','delivered'}, {'path','feeding','slots','picked','delivered','policy'}) or type(route['feeding']) is not bool:
             raise GameError('Malformed conveyor route or feed switch.')
         path = validate_path(state, name, route['path'])
         if not isinstance(route['slots'], list) or len(route['slots']) != len(path)-1:
@@ -75,6 +76,7 @@ def validate(raw, state):
         if picked-delivered != sum(slots) or name == 'bread' and delivered > state['stats']['bread_delivered']:
             raise GameError('Conveyor pickups, queued items and arrivals must balance.')
         clean['routes'][name] = {'path':path,'feeding':route['feeding'],'slots':slots,'picked':picked,'delivered':delivered}
+        if 'policy' in route: clean['routes'][name]['policy']=stock_policy.validate(route['policy'],name)
     return clean
 
 
@@ -87,12 +89,16 @@ def configure(state, enabled, routes):
         raise GameError('Choose a conveyor on/off option and up to three routes.')
     old = state.get('conveyors', {}).get('routes', {}); planned = {}
     for name, route in routes.items():
-        if not isinstance(route, dict) or set(route) != {'path','feeding'} or type(route['feeding']) is not bool:
+        if not isinstance(route, dict) or set(route) not in ({'path','feeding'},{'path','feeding','policy'}) or type(route['feeding']) is not bool:
             raise GameError('Each planned route needs path and a boolean feeding switch.')
         path = validate_path(state, name, route['path'])
         previous = old.get(name)
         planned[name] = dict(previous, feeding=route['feeding']) if previous and previous['path'] == path else {
             'path':path,'feeding':route['feeding'],'slots':[0]*(len(path)-1),'picked':0,'delivered':0}
+        if previous and 'policy' in previous: planned[name]['policy']=dict(previous['policy'])
+        if 'policy' in route:
+            if route['policy'] is None: planned[name].pop('policy',None)
+            else: planned[name]['policy']=stock_policy.validate(route['policy'],name)
     for name, previous in old.items():
         if sum(previous['slots']) and (name not in planned or planned[name]['path'] != previous['path']):
             raise GameError('Stop feeding and run until queued items drain before removing or rerouting a conveyor.')
@@ -131,7 +137,9 @@ def advance(state):
         for i in range(len(slots)-1, 0, -1):
             if old[i-1] and not slots[i]: slots[i] = 1; slots[i-1] = 0
         bag, key = source(state, name)
-        if route['feeding'] and not slots[0] and bag[key]:
+        # Account for arrivals/hops before deciding on a new intake item.
+        route['slots']=slots
+        if not slots[0] and stock_policy.intake_status(state,name,route)=='ready':
             bag[key] -= 1; slots[0] = 1; route['picked'] += 1
         route['slots'] = slots
 
@@ -148,8 +156,7 @@ def status(state, name):
     if route['slots'][-1] and not accepts(state,name): return 'blocked'
     if sum(route['slots']): return 'moving'
     if not route['feeding']: return 'drained'
-    bag,key = source(state,name)
-    return 'ready' if bag[key] else 'waiting_input'
+    return stock_policy.intake_status(state,name,route)
 
 
 def set_feed(state, name, value):

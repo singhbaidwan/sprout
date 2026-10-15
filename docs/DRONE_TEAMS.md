@@ -62,3 +62,5 @@ Stop both controllers before [moving existing machines](LAYOUTS.md). All positio
 ## Shared conveyor controls
 
 [Conveyors](CONVEYORS.md) advance once after both committed commands, regardless of drone count. Remote feed switches share a named gate resource: simultaneous changes to the same gate alternate priority and retry; different gate changes can both succeed. Drone transfers resolve before the belt phase, so a belt cannot take stock already loaded by a drone that tick. Belt arrivals and next machine products are visible at the following observation. Portable team checkpoints preserve all queue items and gates.
+
+Feed, set-policy and clear-policy actions on one conveyor share its named gate reservation. Both drones therefore cannot issue conflicting changes in the same tick; rotating priority and retry apply. Different route policies can be changed together, with one transport phase. Reserves constrain belts after committed drone transfers and do not prevent a drone loading reserved material. [Stock target semantics](STOCK_TARGETS.md).

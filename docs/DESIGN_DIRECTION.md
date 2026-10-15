@@ -1,6 +1,6 @@
 # Making Sprout deeper and distinctive
 
-Research reviewed 2026-09-20; implementation status updated 2026-10-14. These are design recommendations, not a claim to have played the reference games. Only the features explicitly marked implemented below exist in Sprout; the proposals do not add Python APIs yet.
+Research reviewed 2026-09-20; implementation status updated 2026-10-16. These are design recommendations, not a claim to have played the reference games. Only the features explicitly marked implemented below exist in Sprout; the proposals do not add Python APIs yet.
 
 ## Lessons from the references
 
@@ -26,7 +26,8 @@ The proposed differentiator is the interaction between ecology and factory sched
 | Delivered: production choices | Optional residue → compost → fertilizer | Split compost between soil restoration and manufactured fertilizer for growing crops. | Conserved items, bounded buffers, pause/resume and a working bakery/recycler controller. [Rules](RECYCLING.md). Biomass/fuel remains proposed. |
 | Delivered: workshop planning | Relocate existing machines, route previews, compact/default layouts, delivery comparison | Trade chest/mill distance against the depot trip; improve code and layout together. | Atomic validated positions, stock/batch preservation, named routes, old/custom saves tested. [Rules](LAYOUTS.md). |
 | Delivered: bakery infrastructure | Three custom lane conveyors and Python feed gates | Let a drone farm while bounded transport supplies machines; close feeds to reserve stock or drain lines. | Conserved queues, visible backpressure, shared clock, custom-layout saves. [Rules](CONVEYORS.md). |
-| Next: deeper logistics | Splitters, additional machines, storage targets, reusable routes | Divert products between destinations and balance competing demand. | Explicit routing/arbitration; construction and blueprint rules designed separately. |
+| Delivered: stock policies | Source reserves and destination committed-work targets | Balance held supplies against production; account for transit and active batches. | Optional saved policies, per-tick limits and fair shared gate controls. [Rules](STOCK_TARGETS.md). |
+| Next: deeper logistics | Splitters, additional machines, branch routing, reusable routes | Divert products between destinations and balance competing demand. | Explicit routing/arbitration; construction and blueprint rules designed separately. |
 | Later: living fields | Crop rotation, adjacency effects, and crop-specific harvest rules | Alternate soil-restoring crops with hungry crops; reserve irrigation for the right field zone. | Each crop changes code structure or planning, not just its price; inspectors explain effects. |
 | Later: predictable variation | Optional weather forecasts and seasonal contract demand | Store water ahead of a dry period or change production before market demand shifts. | Seeded, replayable scenarios; visible forecast; no unexplained crop loss; toggles retain progress. |
 | Later: specialization | Scout/sensor, irrigator, hauler attachments and research branches | Trade cargo capacity for watering reach or sensing coverage. | Sidegrades create distinct strategies; ordinary Python control flow stays available from the start. |

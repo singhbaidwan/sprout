@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const load=async file=>import(`data:text/javascript;base64,${Buffer.from(readFileSync(new URL(file,import.meta.url),'utf8')).toString('base64')}`);
-const {autoPath,pathProblem,padAllowed,endpoints,conveyorStatus,describeConveyorPad}=await load('../static/conveyor-rules.js');
+const {autoPath,pathProblem,padAllowed,endpoints,conveyorStatus,describeConveyorPad,committedStock,intakeStatus,policyProblem}=await load('../static/conveyor-rules.js');
 const {validatePositions}=await load('../static/layout-rules.js');
 const catalog={entities:{chest:{x:0,y:6},mill:{x:3,y:6},oven:{x:6,y:6},depot:{x:7,y:3}},
   recycling:{entities:{well:{x:0,y:0},composter:{x:1,y:5},mixer:{x:5,y:5}}},
@@ -27,4 +27,17 @@ assert.equal(conveyorStatus({...built,machines:{mill:{input:12}},conveyors:{enab
 assert.ok(validatePositions(built,catalog,{mill:{x:1,y:6}}));
 assert.equal(validatePositions(built,catalog,{}),null);
 assert.equal(JSON.stringify(catalog),original);
+const governed={...state,chest:{wheat:4},machines:{mill:{input:0,remaining:0},oven:{input:0,remaining:0}},conveyors:{enabled:true,routes:{grain:{feeding:true,path:[48,49,50,51],slots:[0,0,0],policy:{version:1,reserve:4,target:6}}}}};
+assert.equal(intakeStatus(governed,'grain'),'reserve_held');
+assert.equal(conveyorStatus(governed,'grain'),'Holding · reserve kept');
+assert.equal(committedStock(governed,'grain'),0);
+governed.chest.wheat=12;governed.machines.mill={input:2,remaining:3};governed.conveyors.routes.grain.slots=[1,1,0];
+assert.equal(committedStock(governed,'grain'),6);
+assert.equal(intakeStatus(governed,'grain'),'target_met');
+assert.equal(conveyorStatus(governed,'grain'),'Moving');
+governed.conveyors.routes.grain.feeding=false;
+assert.equal(intakeStatus(governed,'grain'),'feed_off');
+assert.equal(policyProblem('grain',4,6),null);
+assert.equal(policyProblem('bread',1,null),null);
+for(const [name,reserve,target] of [['grain',true,6],['grain',49,6],['grain',4,true],['flour',9,3],['bread',0,1],['flour',0,-1]])assert.ok(policyProblem(name,reserve,target));
 console.log('Conveyor paths, reserved pads, custom layouts, queues and relocation guards passed.');

@@ -4,7 +4,7 @@
 
 Sprout is a playable, single-player browser game with a Python simulation. Write a short program, watch your drone work, earn harvest income, and improve your routine. The project runs locally with **no third-party dependencies**.
 
-**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. Breadworks includes an optional two-drone team, three reproducible challenges, an efficiency dashboard, optional residue → compost → fertilizer production, saved workshop layouts, programmable bakery conveyors, and stock targets. The [roadmap](docs/ROADMAP.md) distinguishes implemented mechanics from proposed splitters and power.
+**Status:** two playable chapters. Start with Home farm, then build a working wheat → flour → bread production line in **The Breadworks**. Breadworks includes an optional two-drone team, three reproducible challenges, an efficiency dashboard, optional residue → compost → fertilizer production, saved workshop layouts, programmable bakery conveyors, stock targets, and sale/storage bread dispatch. The [roadmap](docs/ROADMAP.md) distinguishes implemented mechanics from proposed splitters and power.
 
 ## Quick start
 
@@ -78,6 +78,12 @@ Load **Conveyor delivery** for a finite four-loaf demo, then **Conveyor farmer**
 In Conveyor workshop, choose a built route and set **Stock targets**. Reserve wheat for drone jobs or cap the mill/oven's committed ingredients, including active batches and in-transit items. Policies run every tick while your program works elsewhere. Balanced stock targets offers a starting preset; Clear restores manual-feed behavior.
 
 Load **Stock target demo** to deliver four loaves while retaining four chest wheat, or **Target-managed farmer** for Continuous care/recycling automation. Python can use `set_conveyor_policy("grain", 4, 6)` and read the saved limits. [Stock policy rules, API and saves](docs/STOCK_TARGETS.md).
+
+## Sell bread or keep it for later
+
+Add the optional **Bread storage: oven → chest** route in Conveyor workshop. Bread dispatch can **Sell**, **Store**, or alternate eligible routes in **Balanced** mode. Both tracks share one oven pickup per tick; switching modes keeps in-flight destinations unchanged. Stored bread uses chest space and earns coins only when delivered to the depot.
+
+Try **Bread branch demo** to store four loaves and sell two, or **Balanced bakery** for Continuous farming with a four-loaf stockpile. `set_bread_routing("balanced")` lets Python choose the policy. [Dispatch rules, API and saves](docs/BREAD_ROUTING.md).
 
 ## Recycle your harvests
 
@@ -184,6 +190,7 @@ sprout/
 │   ├── layout.py           # Atomic machine placement and optional save schema
 │   ├── conveyors.py        # Bounded queues, feed gates, paths and shared transport
 │   ├── stock_policy.py     # Optional source reserves and committed-work targets
+│   ├── bread_routing.py    # Optional shared oven dispatch and branch preference
 │   ├── efficiency.py       # Shared-clock measurement windows
 │   ├── challenges.py       # Fixed trial rules and score validation
 │   ├── team.py             # Two bounded controllers, one clock
@@ -204,7 +211,7 @@ Completed, verified features and milestones are committed and pushed to `origin`
 
 ## Where the game could go next
 
-Cooperating drones, efficiency measurements, challenges, crop recycling and machine layout planning are implemented. Limited bakery conveyors are also implemented. Stock targets now regulate sources and destination work. The next proposed logistics step is programmable splitters or branch routing. Extra machines, power, research, and larger fleets remain proposals. See the [reference-game research and design priorities](docs/DESIGN_DIRECTION.md).
+Cooperating drones, efficiency measurements, challenges, crop recycling and machine layout planning are implemented. Limited bakery conveyors are also implemented. Stock targets now regulate sources and destination work. Sale/storage bread dispatch is implemented. General-purpose junctions, branch ratios and new production choices remain proposals. Extra machines, power, research, and larger fleets remain proposals. See the [reference-game research and design priorities](docs/DESIGN_DIRECTION.md).
 
 Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/save design.
 
@@ -220,6 +227,7 @@ Read the [roadmap](docs/ROADMAP.md) for completion criteria and the scheduling/s
 | [Workshop layouts](docs/LAYOUTS.md) | Movable machines, route previews, delivery test, and saves |
 | [Conveyors](docs/CONVEYORS.md) | Lane routes, bounded queues, Python feed controls, draining and saves |
 | [Stock targets](docs/STOCK_TARGETS.md) | Source reserves, committed-work limits, feedback, Python policies and saves |
+| [Bread routing](docs/BREAD_ROUTING.md) | Optional storage branch, shared dispatch, modes and portable continuations |
 | [Crop care](docs/CROP_CARE.md) | Configurable systems, supplies, equipment, and automation API |
 | [Architecture](docs/ARCHITECTURE.md) | Modules, state, execution, storage, and limits |
 | [Roadmap](docs/ROADMAP.md) | Suggested improvements and programmable factory concept |

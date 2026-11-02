@@ -23,7 +23,7 @@ Select a route, then draw adjacent pads from **S** to **D**. Click an earlier st
 
 A path contains 2–32 distinct tile indices on the 8×8 map, including source and destination. Steps must touch along cardinal edges. Paths cannot pass through crops, rocks, unrelated buildings or uninstalled recycling pads. Machine layout overrides determine endpoints. Drones can fly across belts. Different routes may cross on independent tracks: they do not merge or share segment inventory. Reversing, branching, shared belt junctions and recycling belts are future scope.
 
-Each source/intermediate pad is a one-item segment; the destination is not a segment. Thus capacity is path length minus one, at most 31 per route / 93 total. Item type is fixed by the route. Default capacities are 3 grain, 3 flour and 4 bread. A longer route increases transit delay and ties up more stock.
+Each source/intermediate pad is a one-item segment; the destination is not a segment. Thus capacity is path length minus one, at most 31 per route / 93 for the original three routes, or 124 with optional bread storage. Item type is fixed by the route. Default capacities are 3 grain, 3 flour and 4 bread. A longer route increases transit delay and ties up more stock.
 
 ### One shared clock
 
@@ -55,7 +55,7 @@ Optional [stock targets](STOCK_TARGETS.md) now add `set_conveyor_policy`, `clear
 | `conveyor_items("flour")` | Number of queued items, zero for an unbuilt route. No tick. |
 | `conveyor_status("bread")` | `not_installed`, `paused`, `blocked`, `moving`, `drained`, `ready`, or `waiting_input`. No tick. |
 
-The three names above are the entire namespace. Status precedence is unbuilt, module paused, full destination with a last-slot item, any queued item, empty/feed-off, ready stock, missing source stock. A remote gate action uses a shared gate resource rather than the drone's physical tile. Two simultaneous changes to one gate alternate priority and retry; different gates can change together. Existing interpreter quotas and import/attribute restrictions apply unchanged. The new names are reserved builtins.
+The three names above are the original namespace; optional bread_store adds the storage branch documented in [BREAD_ROUTING.md](BREAD_ROUTING.md). Status precedence is unbuilt, module paused, full destination with a last-slot item, any queued item, empty/feed-off, ready stock, missing source stock. A remote gate action uses a shared gate resource rather than the drone's physical tile. Two simultaneous changes to one gate alternate priority and retry; different gates can change together. Existing interpreter quotas and import/attribute restrictions apply unchanged. The new names are reserved builtins.
 
 ```python
 # Drain grain while flour and bread continue.
@@ -95,4 +95,4 @@ Validation requires exact keys, strict booleans/integers, connected paths matchi
 
 Tests cover hop latency, throughput, new-output timing, material conservation in every demo frame, full inputs and recovery, pause/drain, atomic rerouting/removal, machine-layout compatibility, old/new portable controllers, deterministic retries, gate contention, final-tick order success, schema bounds, endpoints and all sixteen care/recycling farmer variants. Node checks cover editor paths, reserved pads, custom layouts and relocation guards. Browser QA covers keyboard drawing, queues across reload, pause/drain/remove, demos, guides and responsive rendering.
 
-Source reserves and committed-work targets are now implemented in [STOCK_TARGETS.md](STOCK_TARGETS.md). Construction costs, additional machines, programmable splitters, recycling routes, power and infrastructure-specific challenges remain independent proposals in [ROADMAP.md](ROADMAP.md).
+Source reserves and committed-work targets are now implemented in [STOCK_TARGETS.md](STOCK_TARGETS.md). Optional sale/storage dispatch is now delivered in [BREAD_ROUTING.md](BREAD_ROUTING.md). Construction costs, additional machines, general-purpose splitters, recycling routes, power and infrastructure-specific challenges remain independent proposals in [ROADMAP.md](ROADMAP.md).

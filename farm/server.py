@@ -10,7 +10,7 @@ from .interpreter import run_script
 from .continuous import step_script
 from .team import step_team
 from .saves import validate_save
-from . import cultivation, challenges, efficiency, recycling, layout, conveyors, stock_policy
+from . import cultivation, challenges, efficiency, recycling, layout, conveyors, stock_policy, bread_routing
 from .world import create_game, validate_game
 from .factory import CATALOG, MISSIONS as FACTORY_MISSIONS, new_factory, Factory
 
@@ -61,7 +61,7 @@ class GameHandler(BaseHTTPRequestHandler):
             examples = {name: (EXAMPLES / (filename + ".py")).read_text() for name, filename in {
                 "starter": "starter", "full_field": "full_field", "smart_farmer": "smart_farmer", "carrots": "carrots", "continuous": "continuous"
             }.items()}
-            factory_examples = {name: (EXAMPLES / f"factory_{name}.py").read_text() for name in ("starter", "harvest", "bakery", "orders", "continuous", "team_farmer", "team_courier", "recycling", "recycling_loop", "layout_lab", "conveyors", "conveyor_loop", "target_demo", "target_farmer")}
+            factory_examples = {name: (EXAMPLES / f"factory_{name}.py").read_text() for name in ("starter", "harvest", "bakery", "orders", "continuous", "team_farmer", "team_courier", "recycling", "recycling_loop", "layout_lab", "conveyors", "conveyor_loop", "target_demo", "target_farmer", "branch_demo", "branch_farmer")}
             care_examples = {name: (EXAMPLES / f"{name}.py").read_text() for name in ("crop_care", "irrigation")}
             examples.update(care_examples); factory_examples.update(care_examples)
             return self.respond(200, {"state": new_state(), "crops": CROPS, "missions": MISSIONS, "examples": examples,
@@ -128,6 +128,10 @@ class GameHandler(BaseHTTPRequestHandler):
             if path == '/api/conveyor/policies':
                 state=validate_game(payload.get('state'))
                 message=stock_policy.configure(state,payload.get('policies'))
+                return self.respond(200,{'state':state,'message':message})
+            if path=='/api/conveyor/routing':
+                state=validate_game(payload.get('state'))
+                message=bread_routing.configure(state,payload.get('mode'))
                 return self.respond(200,{'state':state,'message':message})
             if path == "/api/settings":
                 state = validate_game(payload.get("state"))

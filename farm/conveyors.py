@@ -1,14 +1,17 @@
 """Bounded bakery belts: one item per segment, one hop per shared phase."""
 from collections import deque
 from .common import GameError, integer
-from . import stock_policy
+from . import stock_policy, bread_routing
+
+BAKERY_ROUTES=('grain','flour','bread')
 
 ROUTES = {
     'grain': {'title': 'Grain feed', 'source': 'chest', 'target': 'mill', 'item': 'wheat'},
     'flour': {'title': 'Flour transfer', 'source': 'mill', 'target': 'oven', 'item': 'flour'},
     'bread': {'title': 'Bread delivery', 'source': 'oven', 'target': 'depot', 'item': 'bread'},
+    'bread_store': {'title': 'Bread storage', 'source': 'oven', 'target': 'chest', 'item': 'bread'},
 }
-RULES = {'version': 1, 'routes': ROUTES, 'max_path': 32, 'capacity': 1, 'stock_policy':stock_policy.RULES}
+RULES = {'version': 1, 'routes': ROUTES, 'bakery_routes':BAKERY_ROUTES, 'max_path': 32, 'capacity': 1, 'stock_policy':stock_policy.RULES, 'bread_routing':bread_routing.RULES}
 
 
 def stations(state):
@@ -58,11 +61,11 @@ def auto_path(state, name):
 
 
 def validate(raw, state):
-    if not isinstance(raw, dict) or set(raw) != {'version','enabled','routes'} or type(raw['version']) is not int or raw['version'] != 1 or type(raw['enabled']) is not bool:
+    if not isinstance(raw, dict) or set(raw) not in ({'version','enabled','routes'},{'version','enabled','routes','routing'}) or type(raw['version']) is not int or raw['version'] != 1 or type(raw['enabled']) is not bool:
         raise GameError('Unsupported or malformed conveyors.')
     routes = raw['routes']
-    if not isinstance(routes, dict) or len(routes) > 3:
-        raise GameError('A bakery supports at most three conveyor routes.')
+    if not isinstance(routes, dict) or len(routes) > 4:
+        raise GameError('A bakery supports at most four conveyor routes.')
     clean = {'version':1, 'enabled':raw['enabled'], 'routes':{}}
     for name, route in routes.items():
         if not isinstance(route, dict) or set(route) not in ({'path','feeding','slots','picked','delivered'}, {'path','feeding','slots','picked','delivered','policy'}) or type(route['feeding']) is not bool:
@@ -77,6 +80,9 @@ def validate(raw, state):
             raise GameError('Conveyor pickups, queued items and arrivals must balance.')
         clean['routes'][name] = {'path':path,'feeding':route['feeding'],'slots':slots,'picked':picked,'delivered':delivered}
         if 'policy' in route: clean['routes'][name]['policy']=stock_policy.validate(route['policy'],name)
+    if 'bread_store' in routes or 'routing' in raw:
+        clean['routing']=bread_routing.validate(raw.get('routing'),routes)
+        if 'bread_store' not in routes:raise GameError('A bread dispatcher needs its storage branch.')
     return clean
 
 
@@ -85,8 +91,8 @@ def configure(state, enabled, routes):
         raise GameError('Conveyors belong to your Breadworks campaign; challenges keep fixed rules.')
     if state['order']['status'] == 'active':
         raise GameError('Finish the active order before rebuilding or configuring conveyors. Python feed switches remain available.')
-    if type(enabled) is not bool or not isinstance(routes, dict) or len(routes) > 3:
-        raise GameError('Choose a conveyor on/off option and up to three routes.')
+    if type(enabled) is not bool or not isinstance(routes, dict) or len(routes) > 4:
+        raise GameError('Choose a conveyor on/off option and up to four routes.')
     old = state.get('conveyors', {}).get('routes', {}); planned = {}
     for name, route in routes.items():
         if not isinstance(route, dict) or set(route) not in ({'path','feeding'},{'path','feeding','policy'}) or type(route['feeding']) is not bool:
@@ -102,9 +108,13 @@ def configure(state, enabled, routes):
     for name, previous in old.items():
         if sum(previous['slots']) and (name not in planned or planned[name]['path'] != previous['path']):
             raise GameError('Stop feeding and run until queued items drain before removing or rerouting a conveyor.')
+    routing=None
+    if 'bread_store' in planned:
+        routing=bread_routing.validate(state.get('conveyors',{}).get('routing',{'version':1,'mode':'sell','next':'bread'}),planned)
     if 'conveyors' not in state and not enabled and not planned:
         return 'Conveyors remain off.'
     state['conveyors'] = {'version':1,'enabled':enabled,'routes':planned}
+    if routing:state['conveyors']['routing']=routing
     return 'Conveyor plan saved. Stock is kept; belts move during farm ticks.' if enabled else 'Conveyors paused. All queued items are kept.'
 
 
@@ -115,6 +125,7 @@ def source(state, name):
 
 def accepts(state, name):
     if name == 'bread': return True
+    if name == 'bread_store':return sum(state['chest'].values())<48
     target = ROUTES[name]['target']
     return state['machines'][target]['input'] < stations(state)[target]['input_capacity']
 
@@ -132,20 +143,27 @@ def advance(state):
             if name == 'bread':
                 price=ENTITIES['depot']['price']
                 state['coins'] += price; state['stats']['earned'] += price; state['stats']['bread_delivered'] += 1
+            elif name=='bread_store':
+                state['chest']['bread']+=1
             else:
                 state['machines'][ROUTES[name]['target']]['input'] += 1
         for i in range(len(slots)-1, 0, -1):
             if old[i-1] and not slots[i]: slots[i] = 1; slots[i-1] = 0
-        bag, key = source(state, name)
-        # Account for arrivals/hops before deciding on a new intake item.
         route['slots']=slots
-        if not slots[0] and stock_policy.intake_status(state,name,route)=='ready':
-            bag[key] -= 1; slots[0] = 1; route['picked'] += 1
-        route['slots'] = slots
+    def pickup(name):
+        route=line['routes'].get(name)
+        if not route or route['slots'][0] or stock_policy.intake_status(state,name,route)!='ready':return False
+        bag,key=source(state,name)
+        bag[key]-=1;route['slots'][0]=1;route['picked']+=1
+        return True
+    # All old stock moves before any pickups; the oven dispatches only one loaf.
+    for name in ('grain','flour'):pickup(name)
+    for name in bread_routing.order(state):
+        if pickup(name):bread_routing.picked(state,name);break
 
 
 def get_route(state, name):
-    if type(name) is not str or name not in ROUTES: raise GameError('Choose grain, flour or bread.')
+    if type(name) is not str or name not in ROUTES: raise GameError('Choose grain, flour, bread or bread_store.')
     return state.get('conveyors', {}).get('routes', {}).get(name)
 
 

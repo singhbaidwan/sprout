@@ -39,16 +39,18 @@ export function conveyorStatus(state,name) {
   const route=state.conveyors?.routes[name];
   if(!route) return 'Not built';
   if(!state.conveyors.enabled) return 'Paused · queue kept';
+  if(name==='bread_store' && route.slots.at(-1) && Object.values(state.chest).reduce((a,b)=>a+b,0)>=48)return 'Blocked · chest full';
   const target={grain:'mill',flour:'oven'}[name];
   if(route.slots.at(-1) && target && state.machines[target].input>=12) return 'Blocked · input full';
   if(route.slots.some(Boolean)) return 'Moving';
   if(!route.feeding) return 'Drained · feed off';
-  return {ready:'Ready · feed on',target_met:'Holding · target met',reserve_held:'Holding · reserve kept',waiting_input:`Waiting for ${name==='grain'?'wheat':name}`}[intakeStatus(state,name)];
+  return {ready:'Ready · feed on',routing_hold:'Holding · other bread branch selected',target_met:'Holding · target met',reserve_held:'Holding · reserve kept',waiting_input:`Waiting for ${name==='grain'?'wheat':name==='bread_store'?'bread':name}`}[intakeStatus(state,name)];
 }
 
 export function committedStock(state,name) {
   if(name==='bread')return null;
   const route=state.conveyors?.routes[name];if(!route)return 0;
+  if(name==='bread_store')return state.chest.bread+route.slots.reduce((a,b)=>a+b,0);
   const machine=state.machines[name==='grain'?'mill':'oven'];
   return machine.input+route.slots.reduce((a,b)=>a+b,0)+(machine.remaining?(name==='grain'?2:1):0);
 }
@@ -56,6 +58,8 @@ export function intakeStatus(state,name) {
   const route=state.conveyors?.routes[name];if(!route)return 'not_installed';
   if(!state.conveyors.enabled)return 'paused';
   if(!route.feeding)return 'feed_off';
+  const mode=state.conveyors.routing?.mode;
+  if(mode && ['bread','bread_store'].includes(name) && (mode==='sell' && name==='bread_store' || mode==='store' && name==='bread'))return 'routing_hold';
   const policy=route.policy;
   if(policy && policy.target!==null && committedStock(state,name)>=policy.target)return 'target_met';
   const stock=name==='grain'?state.chest.wheat:state.machines[name==='flour'?'mill':'oven'].output;
@@ -63,10 +67,10 @@ export function intakeStatus(state,name) {
   return policy && stock<=policy.reserve?'reserve_held':'ready';
 }
 export function policyProblem(name,reserve,target) {
-  if(!['grain','flour','bread'].includes(name))return 'Choose a bakery conveyor.';
+  if(!['grain','flour','bread','bread_store'].includes(name))return 'Choose a bakery conveyor.';
   if(!Number.isInteger(reserve) || reserve<0 || reserve>(name==='grain'?48:8))return `Reserve must be a whole number from 0 to ${name==='grain'?48:8}.`;
   if(name==='bread' && target!==null)return 'The depot sells directly; bread has no destination target.';
-  if(target!==null && (!Number.isInteger(target) || target<0 || target>12))return 'Target must be blank or a whole number from 0 to 12.';
+  if(target!==null && (!Number.isInteger(target) || target<0 || target>(name==='bread_store'?48:12)))return `Target must be blank or a whole number from 0 to ${name==='bread_store'?48:12}.`;
   return null;
 }
 

@@ -210,3 +210,18 @@ See [CONVEYORS.md](CONVEYORS.md) for implemented timing, API and limits. Three i
 | S09 | Playable examples | Finite demo retains four wheat and delivers four bread; target-managed Continuous farmer sustains every care/recycling combination. |
 
 Exact semantics, compatibility and endpoint are in [STOCK_TARGETS.md](STOCK_TARGETS.md). Limits regulate the existing three routes; generic storage logistics and splitters remain separate proposals.
+
+## Bread sale/storage dispatch — implemented 2026-11-03
+
+| ID | Requirement | Acceptance criterion |
+| --- | --- | --- |
+| D01 | Optional branch | A fourth oven→chest bread route requires the original sale route. Core Auto-connect remains three routes; first install defaults Sell. |
+| D02 | Shared-source dispatch | Sell/Store force one destination; Balanced alternates successful pickups with eligible-branch fallback. At most one oven loaf picked per shared tick. |
+| D03 | Conserved destinations | Mode changes affect future pickups only. Existing queues drain to their original destinations; full chest keeps queued items. Storage earns no sale/reward. |
+| D04 | Storage policy | Oven reserve 0–8; chest-bread-plus-transit goal 0–48/None; all chest items still share 48 slots. |
+| D05 | Safe construction | Both branch paths validate together, queue removal/layout guards remain. Empty storage removal drops its dispatcher; other world state stays intact. |
+| D06 | Bounded controls | One-tick remote dispatch action and zero-tick query; two drones changing mode alternate priority. Independent gate changes can share a tick. |
+| D07 | Save compatibility | Old three-route schemas/hashes stay unchanged; strict optional dispatcher stores mode and next preference with solo/team checkpoints. |
+| D08 | Playable examples | Demo stores four bread and sells two; Continuous Balanced bakery sustains all care/recycling combinations. Live cards, modes, paths and policies explain holds. |
+
+Exact rules, examples, bounds and API are in [BREAD_ROUTING.md](BREAD_ROUTING.md). General-purpose junctions, branch ratios, new machines and energy remain proposals.

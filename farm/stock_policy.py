@@ -6,7 +6,7 @@ PRESET = {
     'flour': {'version':1, 'reserve':0, 'target':3},
     'bread': {'version':1, 'reserve':1, 'target':None},
 }
-RULES = {'version':1, 'preset':PRESET}
+RULES = {'version':1, 'preset':PRESET, 'storage_preset':{'version':1,'reserve':0,'target':4}}
 
 
 def validate(raw, name):
@@ -18,7 +18,7 @@ def validate(raw, name):
     if name=='bread':
         if target is not None: raise GameError('The depot sells immediately: use None for the bread target.')
     elif target is not None:
-        target=integer(target,0,12,'destination target')
+        target=integer(target,0,48 if name=='bread_store' else 12,'destination target')
     return {'version':1,'reserve':reserve,'target':target}
 
 
@@ -26,6 +26,7 @@ def committed(state,name,route):
     from .conveyors import ROUTES
     from .factory import ENTITIES
     if name=='bread': return None
+    if name=='bread_store':return state['chest']['bread']+sum(route['slots'])
     target=ROUTES[name]['target'];machine=state['machines'][target]
     return machine['input']+sum(route['slots'])+(ENTITIES[target]['amount'] if machine['remaining'] else 0)
 
@@ -33,6 +34,8 @@ def committed(state,name,route):
 def intake_status(state,name,route):
     from .conveyors import source
     if not route['feeding']: return 'feed_off'
+    from .bread_routing import allowed
+    if not allowed(state,name):return 'routing_hold'
     policy=route.get('policy')
     if policy and policy['target'] is not None and committed(state,name,route)>=policy['target']:
         return 'target_met'
@@ -65,8 +68,8 @@ def configure(state,raw):
         raise GameError('Stock policies belong to your Breadworks campaign.')
     if state['order']['status']=='active':
         raise GameError('Finish the active order before workshop configuration. Python policy actions remain available.')
-    if not isinstance(raw,dict) or len(raw)>3:
-        raise GameError('Choose at most three stock policy updates.')
+    if not isinstance(raw,dict) or len(raw)>4:
+        raise GameError('Choose at most four stock policy updates.')
     planned={}
     for name,policy in raw.items():
         if get_route(state,name) is None: raise GameError('Build each conveyor before configuring its stock policy.')

@@ -91,3 +91,7 @@ Breadworks supports [Workshop layouts](LAYOUTS.md). Stop first to discard any sa
 ## Stock targets during other drone work
 
 [Stock policies](STOCK_TARGETS.md) enforce source reserves and destination committed-work targets on every transport phase, including long navigation or crop-care loops. Target-managed farmer sets policies once, then farms continuously. Policy values, queues and active batches save with the continuation and restore paused. Set/clear are remote one-tick actions; Stop is still required for no-tick workshop edits.
+
+## Bread branch decisions
+
+[Sale/storage dispatch](BREAD_ROUTING.md) adds a one-tick mode action and zero-tick query. Switching mode affects future source pickups; old queued loaves retain their path. Balanced bakery sets a four-loaf storage target and farms continuously while the dispatcher sends other output to sales. Mode, alternating preference, queues and policies restore with the controller paused. Transport remains one phase per action boundary.

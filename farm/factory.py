@@ -2,7 +2,7 @@
 
 from collections import deque
 
-from . import cultivation, efficiency, challenges, recycling, layout, conveyors, stock_policy
+from . import cultivation, efficiency, challenges, recycling, layout, conveyors, stock_policy, bread_routing
 from .engine import Farm, GameError, STAT_NAMES, empty_tile, integer, validate_state
 
 ITEMS = ("wheat", "flour", "bread")
@@ -307,6 +307,9 @@ class Factory(Farm):
         elif name == 'clear_conveyor_policy':
             if len(args)!=1: raise GameError('Use clear_conveyor_policy("grain").')
             message=stock_policy.clear_policy(s,args[0])
+        elif name=='set_bread_routing':
+            if len(args)!=1:raise GameError('Use set_bread_routing("sell"), "store" or "balanced".')
+            message=bread_routing.set_mode(s,args[0])
         elif name in ("load", "unload"):
             if len(args) != 2:
                 raise GameError(f'Use {name}("wheat", amount), "flour", or "bread".')
@@ -396,7 +399,7 @@ class Factory(Farm):
 
     def query(self, name, args):
         arities = {"cargo": 1, "cargo_space": 0, "stored": 2, "free_space": 2,
-                   "machine_status": 1, "get_tick": 0, "get_delivered": 0, 'conveyor_status':1, 'conveyor_items':1, 'conveyor_reserve':1, 'conveyor_target':1}
+                   "machine_status": 1, "get_tick": 0, "get_delivered": 0, 'conveyor_status':1, 'conveyor_items':1, 'conveyor_reserve':1, 'conveyor_target':1, 'bread_routing':0}
         if len(args) != arities[name]:
             raise GameError(f"{name}() expects {arities[name]} arguments.")
         if name == "cargo":
@@ -407,6 +410,7 @@ class Factory(Farm):
         if name == "get_delivered":
             return self.state["stats"]["bread_delivered"]
         if name == 'conveyor_status': return conveyors.status(self.state, args[0])
+        if name=='bread_routing':return bread_routing.get_mode(self.state)
         if name == 'conveyor_items':
             route = conveyors.get_route(self.state,args[0])
             return sum(route['slots']) if route else 0

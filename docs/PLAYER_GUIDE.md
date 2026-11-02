@@ -247,3 +247,9 @@ Load **Conveyor delivery** for four loaves, or **Conveyor farmer** for Continuou
 Choose a built route and set its source reserve/destination target in Conveyor workshop, or use Balanced stock targets. The target counts input, active ingredients and transit; empty means unlimited, zero stops new pickups. Clear selected policy preserves its feed switch. Lowering limits keeps queued items. Bread only has an oven reserve because depot arrivals sell immediately.
 
 Load **Stock target demo** with twelve wheat to deliver four loaves while retaining four wheat. **Target-managed farmer** selects Continuous and handles enabled care/recycling without a repeated grain-feed polling loop. Python can call `set_conveyor_policy("grain",4,6)`, `clear_conveyor_policy("grain")`, `conveyor_reserve("grain")` and `conveyor_target("grain")`. Holds report `reserve_held` / `target_met`. [Exact limits and saves](STOCK_TARGETS.md).
+
+## Bread dispatch and stockpiles
+
+Build the three core conveyor routes, then select **Bread storage: oven → chest**, Auto-route and Apply. **Bread dispatch** selects Sell, Store or Balanced. One oven loaf can enter either branch per tick. Balanced alternates eligible branches and falls back when needed; forced modes hold the other intake. Old queued destinations never change. Stored bread uses shared chest slots and pays only when delivered to the depot.
+
+**Bread branch demo** stores four loaves and sells two from twelve wheat and empty bakery buffers/queues. **Balanced bakery** selects Continuous, keeps four wheat/four bread and supports enabled care/recycling. Use `set_bread_routing("balanced")` and `bread_routing()`. The storage route name is `bread_store`; its policy target counts chest bread plus queued stock. Drain it before removing. [Exact rules and saves](BREAD_ROUTING.md).

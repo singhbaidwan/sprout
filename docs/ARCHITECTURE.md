@@ -28,6 +28,7 @@ farm.js: responsive canvas world        POST /api/run → interpreter → Farm /
 | `farm/layout.py` | Atomic movable-pad validation and sparse optional layout extension. |
 | `farm/conveyors.py` | Validated bakery lane paths, bounded queues, feed gates and one shared transport phase. |
 | `farm/stock_policy.py` | Optional source reserves, committed-work targets, atomic policy updates and runtime policy actions. |
+| `farm/bread_routing.py` | Optional shared oven dispatcher, forced/balanced source arbitration and saved next preference. |
 | `static/conveyor-rules.js`, `static/conveyor-ui.js` | Route planning/backtracking, previews, queue/status cards, feed/pause controls and guide. |
 | `static/layout-rules.js`, `static/layout-ui.js` | Preview validation, shortest movement distances, keyboard placement and layout guide. |
 | `static/recycling-ui.js` | Configuration, new stock/status/goals, dynamic building catalog and recycling guide. |
@@ -105,7 +106,9 @@ All POST requests require `Content-Type: application/json`. Run/upgrade/order re
 
 `POST /api/conveyors` takes `{state, enabled, routes}` and returns `{state, message}`. Routes contain `{path, feeding}` without client-set queues/counters; configuration retains unchanged route stock and rejects live removal/rerouting. See [CONVEYORS.md](CONVEYORS.md).
 
-`POST /api/conveyor/policies` takes `{state, policies}`: at most three built route names mapped to `{version:1, reserve, target}` or `null` for clear. Preflight is atomic; the response is `{state, message}` without advancing time. [Policy rules and compatibility](STOCK_TARGETS.md).
+`POST /api/conveyor/policies` takes `{state, policies}`: at most four built route names mapped to `{version:1, reserve, target}` or `null` for clear. Preflight is atomic; the response is `{state, message}` without advancing time. [Policy rules and compatibility](STOCK_TARGETS.md).
+
+`POST /api/conveyor/routing` takes `{state, mode}` and returns `{state, message}`. It validates a built sale/storage pair and configures Sell/Store/Balanced without advancing time. Runtime `set_bread_routing()` instead costs one shared tick. [Rules and optional schema](BREAD_ROUTING.md).
 
 | Endpoint | Input | Output |
 | --- | --- | --- |
@@ -209,3 +212,9 @@ After committed actions/crop care, `Factory.advance_systems()` advances belts be
 A route's optional `policy.version = 1` remains absent on old worlds, preserving digest identity. Conveyor validation accepts exactly the old route fields plus this optional validated object. UI plans and server rebuilds retain policy fields through pause/feed changes and empty reroutes; explicit clearing removes them. Policy batch configuration preflights all route names/values before mutation.
 
 The existing conveyor phase checks post-action source stock and post-arrival/hop destination committed work immediately before pickup. Committed work includes destination input, active batch ingredient reservation and all route slots. Limits constrain new pickups rather than normalizing old stock, so lower targets do not alter conservation or active production. Set/clear actions share the named gate resource with feed actions; no scheduler phase or checkpoint/envelope version is added. [Schema/API](STOCK_TARGETS.md).
+
+## Shared oven branch dispatch
+
+Conveyor phases now move/deliver all old track items before source pickups. Grain/flour retain their existing behavior. Bread branches share one oven pickup; a bounded dispatcher orders eligible candidates, alternates successful Balanced pickups and retains preference across forced modes. Selection observes moved queues, policies and committed drone changes; no newly baked product enters transport in the same phase.
+
+Storage extends the version 1 route map without modifying old three-route saves. A strict optional routing record requires both branches and retains mode/next preference in world/checkpoint hashes. Storage arrivals update shared chest inventory without sale counters. Route configuration preserves routing across pause/rebuild and removes it when the empty storage branch is removed. Layout validation checks all four paths. Team dispatch commands reserve one global dispatcher, independently of individual route gates. [Contract](BREAD_ROUTING.md).

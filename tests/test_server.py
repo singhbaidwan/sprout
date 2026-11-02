@@ -5,7 +5,7 @@ import unittest
 
 from farm.engine import new_state
 from farm.factory import new_factory
-from farm import conveyors, stock_policy
+from farm import conveyors, stock_policy, bread_routing
 from farm.server import create_server
 
 
@@ -50,6 +50,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('layout_lab', data['chapters']['factory']['examples'])
         self.assertIn('conveyor_loop', data['chapters']['factory']['examples'])
         self.assertIn('target_farmer', data['chapters']['factory']['examples'])
+        self.assertIn('branch_farmer', data['chapters']['factory']['examples'])
         self.assertEqual(data['chapters']['factory']['catalog']['conveyors']['stock_policy']['preset']['grain']['reserve'],4)
         self.assertEqual(data['chapters']['factory']['catalog']['layout']['version'], 1)
         for asset in ['/', '/app.js', '/farm.js', '/factory-ui.js', '/cultivation-ui.js', '/challenges-ui.js', '/recycling-ui.js', '/layout-ui.js', '/layout-rules.js', '/conveyor-ui.js', '/conveyor-rules.js', '/style.css', '/favicon.svg']:
@@ -203,7 +204,7 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertIsNone(json.loads(body)['error'])
             for endpoint, values in [('/api/settings', {'settings': {'fertilizer': False, 'irrigation': False, 'soil': False}}),
-                                     ('/api/unlock', {'item': 'cargo'}), ('/api/order', {}), ('/api/efficiency/reset', {}), ('/api/recycling', {'enabled': True}), ('/api/layout', {'positions': {}}), ('/api/conveyors', {'enabled':True,'routes':{}}), ('/api/conveyor/policies', {'policies':{}})]:
+                                     ('/api/unlock', {'item': 'cargo'}), ('/api/order', {}), ('/api/efficiency/reset', {}), ('/api/recycling', {'enabled': True}), ('/api/layout', {'positions': {}}), ('/api/conveyors', {'enabled':True,'routes':{}}), ('/api/conveyor/policies', {'policies':{}}), ('/api/conveyor/routing', {'mode':'sell'})]:
                 status, _, _ = self.request('POST', endpoint, dict(state=state, **values))
                 self.assertEqual(status, 400)
             wrong = {'state': state, 'codes': ['wait()', 'wait()']} if drones == 1 else {'state': state, 'code': 'wait()'}
@@ -258,6 +259,18 @@ class ServerTests(unittest.TestCase):
                         {'state':new_state(),'policies':{}},{'state':new_factory(),'policies':{'grain':stock_policy.PRESET['grain']}},
                         {'state':state,'policies':None}):
             status,_,_=self.request('POST','/api/conveyor/policies',payload);self.assertEqual(status,400)
+
+    def test_bread_dispatch_endpoint_retains_stock_and_rejects_invalid_or_unbuilt(self):
+        state=new_factory();conveyors.configure(state,True,{name:{'path':conveyors.auto_path(state,name),'feeding':True} for name in conveyors.ROUTES})
+        for mode in bread_routing.MODES:
+            status,_,body=self.request('POST','/api/conveyor/routing',{'state':state,'mode':mode})
+            self.assertEqual(status,200);changed=json.loads(body)['state']
+            self.assertEqual(changed['conveyors']['routing']['mode'],mode)
+            self.assertEqual(changed['tick'],state['tick']);self.assertEqual(changed['chest'],state['chest'])
+            self.assertEqual(changed['conveyors']['routes'],state['conveyors']['routes'])
+        for payload in ({'state':state,'mode':True},{'state':state,'mode':'bad'},
+                        {'state':new_factory(),'mode':'store'},{'state':new_state(),'mode':'sell'}):
+            status,_,_=self.request('POST','/api/conveyor/routing',payload);self.assertEqual(status,400)
 
     def test_efficiency_reset_keeps_world_and_restarts_measurement(self):
         status, _, body = self.request('POST', '/api/run', {'state': new_factory(), 'code': 'wait()'})

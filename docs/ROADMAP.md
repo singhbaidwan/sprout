@@ -1,6 +1,6 @@
 # Roadmap — from a farm to a programmable factory
 
-**Updated:** 2026-10-16. **Playable today:** Home farm, the Breadworks production chapter, configurable crop care, continuous automation, two-drone Breadworks teams, three measured automation challenges, an optional residue → compost → fertilizer chain, saved workshop layouts, programmable bakery conveyors, and stock targets. Future stages below are proposals, not delivery commitments.
+**Updated:** 2026-11-03. **Playable today:** Home farm, the Breadworks production chapter, configurable crop care, continuous automation, two-drone Breadworks teams, three measured automation challenges, an optional residue → compost → fertilizer chain, saved workshop layouts, programmable bakery conveyors, stock targets, and programmable bread sale/storage dispatch. Future stages below are proposals, not delivery commitments.
 
 ## Direction
 
@@ -23,6 +23,7 @@ The initial inspiration was Factorio's emphasis on factories, infrastructure, re
 | 4c — Workshop layouts | Relocate existing machines, preview route distances, compact/default presets, finite delivery comparison, saved layouts. | Atomic placement preserves stock, batches and clocks; named routes and solo/team saves follow pads. Orders/challenges keep fair rules. [Rules](LAYOUTS.md). |
 | 4d — Bakery conveyors | Three bounded lane routes, custom path editor, Python feed gates, pause/drain, finite demo and Continuous farmer. | One hop per shared phase; stock is conserved under backpressure, retries and rebuilding. [Rules](CONVEYORS.md). |
 | 4e — Stock targets | Optional source reserves, destination input/batch/transit limits, Python policy actions/queries, workshop feedback and two examples. | Limits checked every phase; lowering targets retains all stock. Old route hashes remain unchanged. [Rules](STOCK_TARGETS.md). |
+| 4f — Bread dispatch | Optional oven→chest route, sell/store/balanced modes, shared oven intake and two examples. | One source pickup per shared tick, conserved queued destinations, full-chest/target fallback and paused continuations. [Rules](BREAD_ROUTING.md). |
 
 ```mermaid
 flowchart LR
@@ -51,7 +52,7 @@ The game now poses several distinct problems: a full drone cannot harvest; a ful
 
 | Stage | Deliverable | Completion check |
 | --- | --- | --- |
-| 4 — Logistics and building | Two-drone teams and efficiency scenarios delivered; existing machine layouts delivered; bakery conveyors delivered; stock targets delivered; next consider splitters, extra machines and branch routing. Physical movement conflicts are optional future scope. | Controllers cooperate without duplicate items, permanent starvation, or double-speed world time. Blueprints preserve validated layouts. |
+| 4 — Logistics and building | Two-drone teams and efficiency scenarios delivered; existing machine layouts delivered; bakery conveyors delivered; stock targets delivered; bread dispatch delivered; next consider general junctions, ratios and extra machines. Physical movement conflicts are optional future scope. | Controllers cooperate without duplicate items, permanent starvation, or double-speed world time. Blueprints preserve validated layouts. |
 | 5 — Deeper production | Residue/compost/fertilizer delivered; later consider power, research, additional recipes, varied contracts and broader utilization graphs. | Players can see a bottleneck, change code, and measure improved output. |
 | 6 — Scale and sharing | Larger maps, script/blueprint sharing, performance profiling, then optional accounts and hosting. | Representative worlds meet performance budgets; public execution has an isolated deployment design. |
 
@@ -101,4 +102,4 @@ Future configurable modules could add weather, pests, crop rotation bonuses, and
 
 ## Current design recommendation
 
-The two-drone team is implemented. Factorio / The Farmer Was Replaced research and a ranked proposal list are in [DESIGN_DIRECTION.md](DESIGN_DIRECTION.md). The efficiency dashboard and three reproducible contract scenarios are delivered; see [CHALLENGES.md](CHALLENGES.md). The conserved residue → compost → fertilizer chain is delivered; see [RECYCLING.md](RECYCLING.md). Validated relocation and route-distance previews are delivered; see [LAYOUTS.md](LAYOUTS.md). Limited-capacity bakery conveyors are delivered; see [CONVEYORS.md](CONVEYORS.md). Source reserves and committed-work targets are delivered; see [STOCK_TARGETS.md](STOCK_TARGETS.md). The next proposed bounded milestone is splitters or branch routing. Those additions need their own scope decision and are not shipped Python APIs.
+The two-drone team is implemented. Factorio / The Farmer Was Replaced research and a ranked proposal list are in [DESIGN_DIRECTION.md](DESIGN_DIRECTION.md). The efficiency dashboard and three reproducible contract scenarios are delivered; see [CHALLENGES.md](CHALLENGES.md). The conserved residue → compost → fertilizer chain is delivered; see [RECYCLING.md](RECYCLING.md). Validated relocation and route-distance previews are delivered; see [LAYOUTS.md](LAYOUTS.md). Limited-capacity bakery conveyors are delivered; see [CONVEYORS.md](CONVEYORS.md). Source reserves and committed-work targets are delivered; see [STOCK_TARGETS.md](STOCK_TARGETS.md). Bread sale/storage dispatch is delivered; see [BREAD_ROUTING.md](BREAD_ROUTING.md). General-purpose junctions, branch ratios and new production choices remain proposals. Those additions need their own scope decision and are not shipped Python APIs.

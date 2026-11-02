@@ -27,6 +27,18 @@ assert.equal(conveyorStatus({...built,machines:{mill:{input:12}},conveyors:{enab
 assert.ok(validatePositions(built,catalog,{mill:{x:1,y:6}}));
 assert.equal(validatePositions(built,catalog,{}),null);
 assert.equal(JSON.stringify(catalog),original);
+const branchCatalog={...catalog,conveyors:{...catalog.conveyors,routes:{...catalog.conveyors.routes,bread_store:{source:'oven',target:'chest',item:'bread'}}}};
+const branchState={...state,chest:{wheat:12,bread:3},machines:{...state.machines,oven:{input:0,output:4,remaining:0}},conveyors:{enabled:true,routing:{mode:'store',next:'bread'},routes:{bread:{path:[54,55,47,39,31],slots:[0,0,0,0],feeding:true},bread_store:{path:[54,62,61,60,59,58,57,56,48],slots:[1,0,0,0,0,0,0,0],feeding:true,policy:{version:1,reserve:0,target:4}}}}};
+assert.equal(pathProblem(branchState,branchCatalog,'bread_store',autoPath(branchState,branchCatalog,'bread_store')),null);
+assert.equal(committedStock(branchState,'bread_store'),4);
+assert.equal(intakeStatus(branchState,'bread'),'routing_hold');
+assert.equal(conveyorStatus(branchState,'bread'),'Holding · other bread branch selected');
+assert.equal(intakeStatus(branchState,'bread_store'),'target_met');
+assert.equal(policyProblem('bread_store',0,48),null);
+assert.ok(policyProblem('bread_store',0,49));
+branchState.chest.wheat=45;
+branchState.conveyors.routes.bread_store.slots=[1,1,1,1,1,1,1,1];
+assert.equal(conveyorStatus(branchState,'bread_store'),'Blocked · chest full');
 const governed={...state,chest:{wheat:4},machines:{mill:{input:0,remaining:0},oven:{input:0,remaining:0}},conveyors:{enabled:true,routes:{grain:{feeding:true,path:[48,49,50,51],slots:[0,0,0],policy:{version:1,reserve:4,target:6}}}}};
 assert.equal(intakeStatus(governed,'grain'),'reserve_held');
 assert.equal(conveyorStatus(governed,'grain'),'Holding · reserve kept');

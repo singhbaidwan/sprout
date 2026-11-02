@@ -271,7 +271,7 @@ export class FarmRenderer {
   }
   drawConveyors() {
     const s=this.state,c=this.ctx,u=this.unit;
-    const colors={grain:'#a98539',flour:'#7c91a4',bread:'#ba7958'};
+    const colors={grain:'#a98539',flour:'#7c91a4',bread:'#ba7958',bread_store:'#8b77a1'};
     const drawTrack=(name,path,slots=[],draft=false)=>{
       const points=path.map(cell=>this.point(cell%8+.5,Math.floor(cell/8)+.5));
       for(let i=1;i<points.length;i++) {

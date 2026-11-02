@@ -18,11 +18,11 @@ WAIT='while True:\n    wait()'
 EXAMPLES=Path(__file__).resolve().parents[1]/'examples'
 
 
-def plan(state, names=tuple(conveyors.ROUTES)):
+def plan(state, names=conveyors.BAKERY_ROUTES):
     return {name:{'path':conveyors.auto_path(state,name),'feeding':True} for name in names}
 
 
-def world(names=tuple(conveyors.ROUTES)):
+def world(names=conveyors.BAKERY_ROUTES):
     state=new_factory();conveyors.configure(state,True,plan(state,names));return state
 
 

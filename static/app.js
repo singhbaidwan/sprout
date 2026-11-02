@@ -389,6 +389,7 @@ function stop(silent = false) {
   clearTimeout(timer); timer = null;
   queue = []; queueIndex = 0; resultError = null; currentLine = null;
   checkpoint = null; stepping = false;
+  $('action-status').textContent='Stopped · farm progress kept';
   setMode('idle', 'Stopped · farm progress kept'); updateLines(); save();
   if (!silent) log('Stopped. Only completed actions have been kept.');
 }
@@ -450,7 +451,7 @@ $('latest-log').addEventListener('click', () => { $('console').scrollTop = $('co
 $('clear-log').addEventListener('click', () => { $('console').replaceChildren(); logs = 0; $('log-count').textContent = '0'; });
 $('example-select').addEventListener('change', event => {
   const value = event.target.value;
-  if (examples?.[value]) { if (value === 'continuous' || value === 'recycling_loop' || value === 'conveyor_loop' || value === 'target_farmer') { showDrone(0); $('execution-select').value = 'continuous'; } if (value.startsWith('team_')) { $('execution-select').value = 'team'; showDrone(value === 'team_farmer' ? 0 : 1); } setCode(examples[value]); setMode('idle'); save(); log('Example loaded. It will run from your current farm state.'); toast('Example loaded. Make it your own.'); }
+  if (examples?.[value]) { if (value === 'continuous' || value === 'recycling_loop' || value === 'conveyor_loop' || value === 'target_farmer' || value === 'branch_farmer') { showDrone(0); $('execution-select').value = 'continuous'; } if (value.startsWith('team_')) { $('execution-select').value = 'team'; showDrone(value === 'team_farmer' ? 0 : 1); } setCode(examples[value]); setMode('idle'); save(); log('Example loaded. It will run from your current farm state.'); toast('Example loaded. Make it your own.'); }
   event.target.value = '';
 });
 
@@ -569,7 +570,7 @@ function activateChapter(name, game) {
   $('guide-title').textContent = factory ? 'The path from grain to bread.' : 'A small guide to big harvests.';
   document.querySelector('[data-guide="crops"]').textContent = factory ? 'Recipes & missions' : 'Crops & missions';
   const labels = factory ? {starter: 'First bread', harvest: 'Harvest & store', bakery: 'Farm to bakery', orders: 'Order runner'} : {starter: 'Your first row', full_field: 'The whole field', smart_farmer: 'Harvest & replant', carrots: 'A carrot patch'};
-  Object.assign(labels, {team_farmer: 'Team: farmer', team_courier: 'Team: courier', continuous: 'Continuous autopilot', crop_care: 'Smart crop care', irrigation: 'Sprinkler network', recycling: 'First recycled fertilizer', recycling_loop: 'Recycling autopilot', layout_lab: 'Layout delivery test', conveyors:'Conveyor delivery', conveyor_loop:'Conveyor farmer', target_demo:'Stock target demo', target_farmer:'Target-managed farmer'});
+  Object.assign(labels, {team_farmer: 'Team: farmer', team_courier: 'Team: courier', continuous: 'Continuous autopilot', crop_care: 'Smart crop care', irrigation: 'Sprinkler network', recycling: 'First recycled fertilizer', recycling_loop: 'Recycling autopilot', layout_lab: 'Layout delivery test', conveyors:'Conveyor delivery', conveyor_loop:'Conveyor farmer', target_demo:'Stock target demo', target_farmer:'Target-managed farmer', branch_demo:'Bread branch demo', branch_farmer:'Balanced bakery'});
   document.querySelector('[data-guide="recycling"]').hidden = !factory;
   document.querySelector('[data-guide="layout"]').hidden = !factory;
   document.querySelector('[data-guide="conveyors"]').hidden = !factory;
@@ -667,6 +668,16 @@ async function changeStockPolicies(policies) {
   } catch(error){if(token===requestToken){setMode('error');toast(error.message,true);}}
 }
 
+async function changeBreadRouting(selectedMode) {
+  if(!isFactory() || inTrial() || !['idle','error'].includes(mode))return;
+  const token=++requestToken;controller=new AbortController();setMode('loading','Saving bread routing…');
+  try{
+    const result=await api('conveyor/routing',{state,mode:selectedMode},controller.signal);
+    if(token!==requestToken)return;
+    updateState(result.state);setMode('idle');save();log(result.message,'success');toast(result.message);
+  }catch(error){if(token===requestToken){setMode('error');toast(error.message,true);}}
+}
+
 async function changeLayout(positions) {
   if (!isFactory() || inTrial() || !['idle','error'].includes(mode)) return;
   const token=++requestToken; controller=new AbortController(); setMode('loading','Saving workshop layout…');
@@ -724,7 +735,7 @@ async function boot() {
     crops = data.crops; careRules = data.cultivation; setupCare(careRules, changeCare); chapters = data.chapters; examples = chapters.classic.examples;
     setupRecycling(chapters.factory.catalog.recycling, changeRecycling);
     setupLayout(chapters.factory.catalog, changeLayout, placement=>{renderer.placement=placement; renderer.draw(performance.now());});
-    setupConveyors(chapters.factory.catalog,changeConveyors,path=>{renderer.conveyorPreview=path;renderer.draw(performance.now());},changeStockPolicies);
+    setupConveyors(chapters.factory.catalog,changeConveyors,path=>{renderer.conveyorPreview=path;renderer.draw(performance.now());},changeStockPolicies,changeBreadRouting);
     let restored = data.state, code = examples.starter, restoreMessage = null;
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('sprout.save.v1') || 'null');

@@ -72,3 +72,5 @@ Optional campaign recycling is excluded from all version 1 trial worlds, includi
 Bakery conveyors are campaign infrastructure, documented in [CONVEYORS.md](CONVEYORS.md). Trials reject conveyor configuration and saved extensions even when disabled/empty, retaining the original comparable rule sets and records.
 
 [Stock targets](STOCK_TARGETS.md) extend campaign conveyor routes. The policy endpoint rejects trials even for empty updates. No trial catalog, score definition or record migration changes in this milestone.
+
+[Optional bread dispatch](BREAD_ROUTING.md) is campaign-only infrastructure. Its configuration endpoint rejects trials, and existing conveyor-extension exclusions retain the original challenge rule sets and records.
